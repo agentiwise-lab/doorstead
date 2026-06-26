@@ -8,59 +8,74 @@ const formatPrice = (price: number | null): string => {
 
 export function ListingCard({ listing }: { listing: Listing }) {
   const firstPhoto = listing.photoUrls[0]
+  const beds = listing.beds
+  const baths = listing.baths
+  const area = listing.areaSqft
 
   return (
     <Link
       href={`/listing/${listing.id}`}
-      className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 rounded-lg"
+      className="group block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2"
     >
-      <article className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
-      <div className="aspect-[4/3] bg-gray-100">
-        {firstPhoto ? (
-          <img
-            src={firstPhoto}
-            alt={listing.address ?? 'Property photo'}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
-            No photo
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <p className="text-lg font-semibold text-gray-900">
-          {formatPrice(listing.priceGbp)}
-        </p>
-        <p className="mt-1 text-sm text-gray-700">
-          {listing.address ?? 'Address unavailable'}
-        </p>
-        <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+      <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-sm transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-lg">
+        <div className="relative aspect-[4/3] overflow-hidden bg-brand-50">
+          {firstPhoto ? (
+            <img
+              src={firstPhoto}
+              alt={listing.address ?? 'Property photo'}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-sm font-medium text-brand-600/60">
+              No photo available
+            </div>
+          )}
           {listing.type && (
-            <div>
-              <dt className="sr-only">Type</dt>
-              <dd>{listing.type}</dd>
-            </div>
+            <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-800 shadow-sm">
+              {listing.type}
+            </span>
           )}
-          {listing.beds !== null && (
-            <div>
-              <dt className="sr-only">Bedrooms</dt>
-              <dd>
-                {listing.beds} bed{listing.beds === 1 ? '' : 's'}
-              </dd>
-            </div>
-          )}
-          {listing.baths !== null && (
-            <div>
-              <dt className="sr-only">Bathrooms</dt>
-              <dd>
-                {listing.baths} bath{listing.baths === 1 ? '' : 's'}
-              </dd>
-            </div>
-          )}
-        </dl>
-      </div>
+        </div>
+
+        <div className="flex flex-1 flex-col p-5">
+          <p className="font-display text-2xl font-semibold tracking-tight text-brand-900">
+            {formatPrice(listing.priceGbp)}
+          </p>
+          <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-gray-600">
+            {listing.address ?? 'Address available on request'}
+          </p>
+
+          <dl className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-brand-100 pt-4 text-sm text-gray-700">
+            {beds !== null && (
+              <div className="flex items-center gap-1.5">
+                <dt className="font-semibold text-brand-900">{beds}</dt>
+                <dd className="text-gray-600">
+                  bed{beds === 1 ? '' : 's'}
+                </dd>
+              </div>
+            )}
+            {baths !== null && (
+              <div className="flex items-center gap-1.5">
+                <dt className="font-semibold text-brand-900">{baths}</dt>
+                <dd className="text-gray-600">
+                  bath{baths === 1 ? '' : 's'}
+                </dd>
+              </div>
+            )}
+            {area !== null && (
+              <div className="flex items-center gap-1.5">
+                <dt className="font-semibold text-brand-900">
+                  {area.toLocaleString('en-GB')}
+                </dt>
+                <dd className="text-gray-600">sq ft</dd>
+              </div>
+            )}
+            {beds === null && baths === null && area === null && (
+              <span className="text-gray-400">Details on request</span>
+            )}
+          </dl>
+        </div>
       </article>
     </Link>
   )

@@ -13,79 +13,87 @@ const formatArea = (area: number | null): string | null => {
   return `${area.toLocaleString('en-GB')} sq ft`
 }
 
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+        {label}
+      </dt>
+      <dd className="mt-1 text-lg font-semibold text-brand-900">{value}</dd>
+    </div>
+  )
+}
+
 export function ListingDetail({ listing }: { listing: Listing }) {
-  const address = listing.address ?? 'Address unavailable'
+  const address = listing.address ?? 'Address available on request'
   const area = formatArea(listing.areaSqft)
 
+  const facts: { label: string; value: string }[] = []
+  if (listing.type) facts.push({ label: 'Type', value: listing.type })
+  if (listing.beds !== null)
+    facts.push({ label: 'Bedrooms', value: String(listing.beds) })
+  if (listing.baths !== null)
+    facts.push({ label: 'Bathrooms', value: String(listing.baths) })
+  if (area) facts.push({ label: 'Area', value: area })
+
   return (
-    <main className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
-      <div className="mb-6">
-        <Link
-          href="/"
-          className="text-sm text-gray-600 hover:text-gray-900"
-        >
-          &larr; Back to all properties
-        </Link>
-      </div>
+    <div className="min-h-screen bg-brand-50">
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 transition hover:text-brand-800"
+          >
+            <span aria-hidden="true">&larr;</span> Back to all properties
+          </Link>
+        </div>
 
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
-          {address}
-        </h1>
-      </header>
-
-      <section className="mb-8">
-        <PhotoGallery photoUrls={listing.photoUrls} alt={address} />
-      </section>
-
-      <section className="mb-8 rounded-lg border border-gray-200 bg-white p-5 sm:p-6">
-        <p className="text-2xl font-semibold text-gray-900 sm:text-3xl">
-          {formatPrice(listing.priceGbp)}
-        </p>
-        <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+        <header className="mb-6">
           {listing.type && (
-            <div>
-              <dt className="text-gray-500">Type</dt>
-              <dd className="mt-1 font-medium text-gray-900">{listing.type}</dd>
-            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">
+              {listing.type}
+            </p>
           )}
-          {listing.beds !== null && (
-            <div>
-              <dt className="text-gray-500">Bedrooms</dt>
-              <dd className="mt-1 font-medium text-gray-900">{listing.beds}</dd>
-            </div>
-          )}
-          {listing.baths !== null && (
-            <div>
-              <dt className="text-gray-500">Bathrooms</dt>
-              <dd className="mt-1 font-medium text-gray-900">
-                {listing.baths}
-              </dd>
-            </div>
-          )}
-          {area && (
-            <div>
-              <dt className="text-gray-500">Area</dt>
-              <dd className="mt-1 font-medium text-gray-900">{area}</dd>
-            </div>
-          )}
-        </dl>
-      </section>
+          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-brand-900 sm:text-4xl">
+            {address}
+          </h1>
+        </header>
 
-      {listing.description && (
-        <section className="mb-10">
-          <h2 className="mb-3 text-lg font-semibold text-gray-900">
-            About this property
-          </h2>
-          <div className="whitespace-pre-wrap text-base leading-relaxed text-gray-800">
-            {listing.description}
-          </div>
+        <section className="mb-8">
+          <PhotoGallery photoUrls={listing.photoUrls} alt={address} />
         </section>
-      )}
 
-      <section>
-        <InquiryForm listingId={listing.id} />
-      </section>
-    </main>
+        <section className="mb-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+            Guide price
+          </p>
+          <p className="mt-1 font-display text-3xl font-semibold tracking-tight text-brand-900 sm:text-4xl">
+            {formatPrice(listing.priceGbp)}
+          </p>
+          {facts.length > 0 && (
+            <dl className="mt-6 grid grid-cols-2 gap-5 border-t border-brand-100 pt-6 sm:grid-cols-4">
+              {facts.map((fact) => (
+                <Fact key={fact.label} label={fact.label} value={fact.value} />
+              ))}
+            </dl>
+          )}
+        </section>
+
+        {listing.description && (
+          <section className="mb-10 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="mb-4 font-display text-xl font-semibold text-brand-900">
+              About this property
+            </h2>
+            <div className="whitespace-pre-wrap text-base leading-relaxed text-gray-700">
+              {listing.description}
+            </div>
+          </section>
+        )}
+
+        <section>
+          <InquiryForm listingId={listing.id} />
+        </section>
+      </main>
+    </div>
   )
 }
