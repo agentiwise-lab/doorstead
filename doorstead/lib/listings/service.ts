@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { anonClient } from '@/lib/db/anon-client'
+import { createServerClient } from '@/lib/db/server-client'
 import type {
   Listing,
   ListingInput,
@@ -79,8 +80,18 @@ export class DefaultListingService implements ListingService {
     return (data ?? []).map((row) => toListing(row as ListingRow))
   }
 
-  listAll(): Promise<Listing[]> {
-    return notImplemented('listAll')
+  async listAll(): Promise<Listing[]> {
+    const serverClient = createServerClient()
+    const { data, error } = await serverClient
+      .from('listings')
+      .select(
+        'id, address, type, price_gbp, beds, baths, area_sqft, status, description, photo_urls, created_at, updated_at, deleted_at',
+      )
+      .is('deleted_at', null)
+      .order('updated_at', { ascending: false })
+
+    if (error) throw error
+    return (data ?? []).map((row) => toListing(row as ListingRow))
   }
 
   async getById(id: string): Promise<Listing | null> {
