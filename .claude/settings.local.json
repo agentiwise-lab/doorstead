@@ -110,7 +110,8 @@
       "mcp__claude-in-chrome__browser_batch",
       "mcp__claude-in-chrome__read_console_messages",
       "mcp__claude-in-chrome__read_network_requests",
-      "Bash(NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy npm run build)"
+      "Bash(NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy npm run build)",
+      "Workflow(deep-research)"
     ],
     "deny": [
       "Bash(git rebase:*)",
