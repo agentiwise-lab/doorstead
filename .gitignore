@@ -1,4 +1,9 @@
 coding-skills/
 docs/
 .DS_Store
-.claude/
+
+# Track .claude config (settings), but not runtime state or machine-local symlinks
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.claude/*.lock
+.claude/skills/
