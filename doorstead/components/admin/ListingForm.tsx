@@ -81,7 +81,7 @@ function SubmitButtons({
       <button
         type="submit"
         name="intent"
-        value="draft"
+        value={initialStatus}
         disabled={pending}
         className={`${baseClass} border border-gray-300 bg-white text-gray-800 hover:bg-gray-50`}
       >
