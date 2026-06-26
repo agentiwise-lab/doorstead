@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { authService } from '@/lib/auth/service'
 import { LogoutButton } from '@/components/admin/LogoutButton'
@@ -24,10 +25,24 @@ export default async function AdminLayout({
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-6">
             <span className="text-lg font-semibold tracking-tight text-gray-900">
               Doorstead Admin
             </span>
+            <nav className="flex items-baseline gap-4 text-sm">
+              <Link
+                href="/admin"
+                className="font-medium text-gray-600 hover:text-gray-900"
+              >
+                Listings
+              </Link>
+              <Link
+                href="/admin/inquiries"
+                className="font-medium text-gray-600 hover:text-gray-900"
+              >
+                Inquiries
+              </Link>
+            </nav>
             <span className="text-sm text-gray-500">{email}</span>
           </div>
           <LogoutButton />
