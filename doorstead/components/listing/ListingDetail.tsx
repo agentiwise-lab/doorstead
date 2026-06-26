@@ -84,9 +84,6 @@ export function ListingDetail({ listing }: { listing: Listing }) {
       )}
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-gray-900">
-          Enquire about this property
-        </h2>
         <InquiryForm listingId={listing.id} />
       </section>
     </main>
