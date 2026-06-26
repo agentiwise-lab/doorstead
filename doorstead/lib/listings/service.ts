@@ -59,10 +59,6 @@ const toListing = (row: ListingRow): Listing => ({
   updatedAt: row.updated_at,
 })
 
-const notImplemented = (method: string): never => {
-  throw new Error(`ListingService.${method} is not implemented in this unit`)
-}
-
 export class DefaultListingService implements ListingService {
   constructor(private readonly client: SupabaseClient) {}
 
@@ -168,15 +164,39 @@ export class DefaultListingService implements ListingService {
     return toListing(data as ListingRow)
   }
 
-  setStatus(id: string, status: ListingStatus): Promise<Listing | null> {
-    void id
-    void status
-    return notImplemented('setStatus')
+  async setStatus(
+    id: string,
+    status: ListingStatus,
+  ): Promise<Listing | null> {
+    if (!UUID_REGEX.test(id)) return null
+
+    const client = createServerClient()
+    const { data, error } = await client
+      .from('listings')
+      .update({ status })
+      .eq('id', id)
+      .is('deleted_at', null)
+      .select(
+        'id, address, type, price_gbp, beds, baths, area_sqft, status, description, photo_urls, created_at, updated_at, deleted_at',
+      )
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return null
+    return toListing(data as ListingRow)
   }
 
-  delete(id: string): Promise<void> {
-    void id
-    return notImplemented('delete')
+  async delete(id: string): Promise<void> {
+    if (!UUID_REGEX.test(id)) return
+
+    const client = createServerClient()
+    const { error } = await client
+      .from('listings')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('deleted_at', null)
+
+    if (error) throw error
   }
 }
 

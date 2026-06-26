@@ -11,10 +11,32 @@ export type UpdateCall = {
   input: ListingInput
   status: ListingStatus
 }
+export type SetStatusCall = { id: string; status: ListingStatus }
 
 export class FakeListingService implements ListingService {
   createCalls: CreateCall[] = []
   updateCalls: UpdateCall[] = []
+  setStatusCalls: SetStatusCall[] = []
+  deleteCalls: string[] = []
+  getByIdImpl: (id: string) => Promise<Listing | null> = async () => null
+  setStatusImpl: (
+    id: string,
+    status: ListingStatus,
+  ) => Promise<Listing | null> = async (id, status) => ({
+    id,
+    address: '12 Baker Street',
+    type: 'House',
+    priceGbp: 500000,
+    beds: 3,
+    baths: 2,
+    areaSqft: 1200,
+    status,
+    description: 'A lovely home.',
+    photoUrls: ['https://example.com/x.jpg'],
+    createdAt: '2026-06-26T00:00:00Z',
+    updatedAt: '2026-06-26T00:00:00Z',
+  })
+  deleteImpl: (id: string) => Promise<void> = async () => {}
   updateImpl: (
     id: string,
     input: ListingInput,
@@ -55,8 +77,8 @@ export class FakeListingService implements ListingService {
   async listAll(): Promise<Listing[]> {
     throw new Error('FakeListingService.listAll not stubbed')
   }
-  async getById(_id: string): Promise<Listing | null> {
-    throw new Error('FakeListingService.getById not stubbed')
+  async getById(id: string): Promise<Listing | null> {
+    return this.getByIdImpl(id)
   }
   async create(input: ListingInput, status: ListingStatus): Promise<Listing> {
     this.createCalls.push({ input, status })
@@ -71,12 +93,14 @@ export class FakeListingService implements ListingService {
     return this.updateImpl(id, input, status)
   }
   async setStatus(
-    _id: string,
-    _status: ListingStatus,
+    id: string,
+    status: ListingStatus,
   ): Promise<Listing | null> {
-    throw new Error('FakeListingService.setStatus not stubbed')
+    this.setStatusCalls.push({ id, status })
+    return this.setStatusImpl(id, status)
   }
-  async delete(_id: string): Promise<void> {
-    throw new Error('FakeListingService.delete not stubbed')
+  async delete(id: string): Promise<void> {
+    this.deleteCalls.push(id)
+    return this.deleteImpl(id)
   }
 }
