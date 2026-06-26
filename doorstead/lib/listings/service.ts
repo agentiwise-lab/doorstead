@@ -111,10 +111,28 @@ export class DefaultListingService implements ListingService {
     return toListing(data as ListingRow)
   }
 
-  create(input: ListingInput, status: ListingStatus): Promise<Listing> {
-    void input
-    void status
-    return notImplemented('create')
+  async create(input: ListingInput, status: ListingStatus): Promise<Listing> {
+    const client = createServerClient()
+    const { data, error } = await client
+      .from('listings')
+      .insert({
+        address: input.address,
+        type: input.type,
+        price_gbp: input.priceGbp,
+        beds: input.beds,
+        baths: input.baths,
+        area_sqft: input.areaSqft,
+        description: input.description,
+        photo_urls: input.photoUrls,
+        status,
+      })
+      .select(
+        'id, address, type, price_gbp, beds, baths, area_sqft, status, description, photo_urls, created_at, updated_at, deleted_at',
+      )
+      .single()
+
+    if (error) throw error
+    return toListing(data as ListingRow)
   }
 
   update(
