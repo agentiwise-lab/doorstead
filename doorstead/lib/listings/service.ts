@@ -93,7 +93,8 @@ export class DefaultListingService implements ListingService {
   async getById(id: string): Promise<Listing | null> {
     if (!UUID_REGEX.test(id)) return null
 
-    const { data, error } = await this.client
+    const client = createServerClient()
+    const { data, error } = await client
       .from('listings')
       .select(
         'id, address, type, price_gbp, beds, baths, area_sqft, status, description, photo_urls, created_at, updated_at, deleted_at',
