@@ -6,7 +6,12 @@ import type {
   ListingStatus,
   ListingType,
 } from '@/lib/listings/contract'
-import type { CreateListingState } from '@/lib/listings/actions'
+import type {
+  CreateListingState,
+  UpdateListingState,
+} from '@/lib/listings/actions'
+
+type FormState = CreateListingState | UpdateListingState
 
 const LISTING_TYPES: readonly ListingType[] = [
   'House',
@@ -18,13 +23,11 @@ const LISTING_TYPES: readonly ListingType[] = [
 ]
 
 export type ListingFormProps = {
-  action: (
-    state: CreateListingState,
-    formData: FormData,
-  ) => Promise<CreateListingState>
+  action: (state: FormState, formData: FormData) => Promise<FormState>
   initialValues?: Partial<ListingInput>
   initialStatus?: ListingStatus
   mode?: 'create' | 'update'
+  hiddenFields?: Record<string, string>
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -102,17 +105,21 @@ export function ListingForm({
   initialValues,
   initialStatus = 'draft',
   mode = 'create',
+  hiddenFields,
 }: ListingFormProps) {
-  const [state, formAction] = useFormState<CreateListingState, FormData>(
-    action,
-    { fieldErrors: {} },
-  )
+  const [state, formAction] = useFormState<FormState, FormData>(action, {
+    fieldErrors: {},
+  })
 
   const errors = state.fieldErrors ?? {}
   const initialPhotos = (initialValues?.photoUrls ?? []).join('\n')
 
   return (
     <form action={formAction} className="space-y-5">
+      {hiddenFields &&
+        Object.entries(hiddenFields).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
       <div>
         <label
           htmlFor="address"
