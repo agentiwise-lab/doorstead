@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Listing } from '@/lib/listings/contract'
 
 const formatPrice = (price: number | null): string => {
@@ -9,7 +10,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
   const firstPhoto = listing.photoUrls[0]
 
   return (
-    <article className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+    <Link
+      href={`/listing/${listing.id}`}
+      className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 rounded-lg"
+    >
+      <article className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
       <div className="aspect-[4/3] bg-gray-100">
         {firstPhoto ? (
           <img
@@ -56,6 +61,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
           )}
         </dl>
       </div>
-    </article>
+      </article>
+    </Link>
   )
 }
