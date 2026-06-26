@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { Listing } from '@/lib/listings/contract'
 import { PhotoGallery } from './PhotoGallery'
-import { ContactFormEmbed } from './ContactFormEmbed'
+import { InquiryForm } from './InquiryForm'
 
 const formatPrice = (price: number | null): string => {
   if (price === null) return 'Price on request'
@@ -87,7 +87,7 @@ export function ListingDetail({ listing }: { listing: Listing }) {
         <h2 className="mb-3 text-lg font-semibold text-gray-900">
           Enquire about this property
         </h2>
-        <ContactFormEmbed />
+        <InquiryForm listingId={listing.id} />
       </section>
     </main>
   )
