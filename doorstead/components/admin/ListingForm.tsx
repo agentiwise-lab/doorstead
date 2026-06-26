@@ -28,7 +28,10 @@ export type ListingFormProps = {
   initialStatus?: ListingStatus
   mode?: 'create' | 'update'
   hiddenFields?: Record<string, string>
+  missingFields?: string[]
 }
+
+const PUBLISH_GUARD_MESSAGE = 'Required to publish.'
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
@@ -106,6 +109,7 @@ export function ListingForm({
   initialStatus = 'draft',
   mode = 'create',
   hiddenFields,
+  missingFields,
 }: ListingFormProps) {
   const [state, formAction] = useFormState<FormState, FormData>(action, {
     fieldErrors: {},
@@ -113,9 +117,24 @@ export function ListingForm({
 
   const errors = state.fieldErrors ?? {}
   const initialPhotos = (initialValues?.photoUrls ?? []).join('\n')
+  const missing = new Set(missingFields ?? [])
+
+  const errorFor = (field: string): string | undefined => {
+    if (errors[field]) return errors[field]
+    if (missing.has(field)) return PUBLISH_GUARD_MESSAGE
+    return undefined
+  }
 
   return (
     <form action={formAction} className="space-y-5">
+      {missing.size > 0 && (
+        <div
+          role="alert"
+          className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          Cannot publish — fix these fields and save again.
+        </div>
+      )}
       {hiddenFields &&
         Object.entries(hiddenFields).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
@@ -134,7 +153,7 @@ export function ListingForm({
           defaultValue={initialValues?.address ?? ''}
           className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
         />
-        <FieldError message={errors.address} />
+        <FieldError message={errorFor('address')} />
       </div>
 
       <div>
@@ -157,7 +176,7 @@ export function ListingForm({
             </option>
           ))}
         </select>
-        <FieldError message={errors.type} />
+        <FieldError message={errorFor('type')} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -177,7 +196,7 @@ export function ListingForm({
             defaultValue={initialValues?.priceGbp ?? ''}
             className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
           />
-          <FieldError message={errors.priceGbp} />
+          <FieldError message={errorFor('priceGbp')} />
         </div>
         <div>
           <label
@@ -195,7 +214,7 @@ export function ListingForm({
             defaultValue={initialValues?.areaSqft ?? ''}
             className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
           />
-          <FieldError message={errors.areaSqft} />
+          <FieldError message={errorFor('areaSqft')} />
         </div>
         <div>
           <label
@@ -213,7 +232,7 @@ export function ListingForm({
             defaultValue={initialValues?.beds ?? ''}
             className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
           />
-          <FieldError message={errors.beds} />
+          <FieldError message={errorFor('beds')} />
         </div>
         <div>
           <label
@@ -231,7 +250,7 @@ export function ListingForm({
             defaultValue={initialValues?.baths ?? ''}
             className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
           />
-          <FieldError message={errors.baths} />
+          <FieldError message={errorFor('baths')} />
         </div>
       </div>
 
@@ -249,7 +268,7 @@ export function ListingForm({
           defaultValue={initialValues?.description ?? ''}
           className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
         />
-        <FieldError message={errors.description} />
+        <FieldError message={errorFor('description')} />
       </div>
 
       <div>
@@ -267,7 +286,7 @@ export function ListingForm({
           defaultValue={initialPhotos}
           className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
         />
-        <FieldError message={errors.photoUrls} />
+        <FieldError message={errorFor('photoUrls')} />
       </div>
 
       <SubmitButtons mode={mode} initialStatus={initialStatus} />

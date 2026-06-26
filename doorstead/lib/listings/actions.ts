@@ -156,6 +156,82 @@ export async function updateListing(
   redirect('/admin')
 }
 
+export async function publishListing(formData: FormData): Promise<void> {
+  await authService.requireAdmin()
+
+  const idRaw = formData.get('id')
+  const id = typeof idRaw === 'string' ? idRaw.trim() : ''
+  if (!id) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  const current = await listingService.getById(id)
+  if (current === null) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  const candidate: Record<string, unknown> = {
+    photoUrls: current.photoUrls,
+  }
+  if (current.address) candidate.address = current.address
+  if (current.type) candidate.type = current.type
+  if (current.priceGbp !== null) candidate.priceGbp = current.priceGbp
+  if (current.beds !== null) candidate.beds = current.beds
+  if (current.baths !== null) candidate.baths = current.baths
+  if (current.areaSqft !== null) candidate.areaSqft = current.areaSqft
+  if (current.description) candidate.description = current.description
+
+  const result = validateForPublish(candidate)
+  if (!result.ok) {
+    const fields = encodeURIComponent(result.missingFields.join(','))
+    redirect(`/admin/${id}/edit?msg=missing-fields&fields=${fields}`)
+  }
+
+  const updated = await listingService.setStatus(id, 'live')
+  if (updated === null) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  revalidatePath('/')
+  revalidatePath(`/listing/${id}`)
+  redirect('/admin')
+}
+
+export async function unpublishListing(formData: FormData): Promise<void> {
+  await authService.requireAdmin()
+
+  const idRaw = formData.get('id')
+  const id = typeof idRaw === 'string' ? idRaw.trim() : ''
+  if (!id) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  const updated = await listingService.setStatus(id, 'draft')
+  if (updated === null) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  revalidatePath('/')
+  revalidatePath(`/listing/${id}`)
+  redirect('/admin')
+}
+
+export async function deleteListing(formData: FormData): Promise<void> {
+  await authService.requireAdmin()
+
+  const idRaw = formData.get('id')
+  const id = typeof idRaw === 'string' ? idRaw.trim() : ''
+  if (!id) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  await listingService.delete(id)
+
+  revalidatePath('/')
+  revalidatePath(`/listing/${id}`)
+  redirect('/admin')
+}
+
 function humanMessageFor(field: string): string {
   switch (field) {
     case 'address':

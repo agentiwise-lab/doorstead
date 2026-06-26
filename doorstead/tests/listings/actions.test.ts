@@ -31,7 +31,13 @@ vi.mock('@/lib/listings/service', () => ({
   listingService: fakeListingService,
 }))
 
-const { createListing, updateListing } = await import('@/lib/listings/actions')
+const {
+  createListing,
+  updateListing,
+  publishListing,
+  unpublishListing,
+  deleteListing,
+} = await import('@/lib/listings/actions')
 const { revalidatePath } = await import('next/cache')
 const { redirect } = await import('next/navigation')
 
@@ -46,6 +52,8 @@ function makeFormData(entries: Record<string, string>): FormData {
 beforeEach(() => {
   fakeListingService.createCalls = []
   fakeListingService.updateCalls = []
+  fakeListingService.setStatusCalls = []
+  fakeListingService.deleteCalls = []
   fakeListingService.updateImpl = async (id, input, status) => ({
     id,
     address: input.address,
@@ -60,6 +68,22 @@ beforeEach(() => {
     createdAt: '2026-06-26T00:00:00Z',
     updatedAt: '2026-06-26T00:00:00Z',
   })
+  fakeListingService.setStatusImpl = async (id, status) => ({
+    id,
+    address: '12 Baker Street',
+    type: 'House',
+    priceGbp: 500000,
+    beds: 3,
+    baths: 2,
+    areaSqft: 1200,
+    status,
+    description: 'A lovely home.',
+    photoUrls: ['https://example.com/x.jpg'],
+    createdAt: '2026-06-26T00:00:00Z',
+    updatedAt: '2026-06-26T00:00:00Z',
+  })
+  fakeListingService.getByIdImpl = async () => null
+  fakeListingService.deleteImpl = async () => {}
   adminOk = true
   vi.mocked(revalidatePath).mockClear()
   vi.mocked(redirect).mockClear()
@@ -154,5 +178,157 @@ describe('updateListing', () => {
     const fd = makeFormData(validLiveForm)
     await expect(updateListing({}, fd)).rejects.toThrow('Unauthorized')
     expect(fakeListingService.updateCalls.length).toBe(0)
+  })
+})
+
+describe('publishListing', () => {
+  const ID = '22222222-2222-2222-2222-222222222222'
+
+  function makeIdFormData(): FormData {
+    const fd = new FormData()
+    fd.append('id', ID)
+    return fd
+  }
+
+  function completeListing() {
+    return {
+      id: ID,
+      address: '12 Baker Street',
+      type: 'House' as const,
+      priceGbp: 500000,
+      beds: 3,
+      baths: 2,
+      areaSqft: 1200,
+      status: 'draft' as const,
+      description: 'A lovely home.',
+      photoUrls: ['https://example.com/x.jpg'],
+      createdAt: '2026-06-26T00:00:00Z',
+      updatedAt: '2026-06-26T00:00:00Z',
+    }
+  }
+
+  it('redirects to edit with missing-fields when description is missing; does not call setStatus', async () => {
+    fakeListingService.getByIdImpl = async () => ({
+      ...completeListing(),
+      description: null,
+    })
+
+    await expect(publishListing(makeIdFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeListingService.setStatusCalls.length).toBe(0)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+      `/admin/${ID}/edit?msg=missing-fields&fields=description`,
+    )
+  })
+
+  it('on complete listing calls setStatus(id, live) and revalidates both paths', async () => {
+    fakeListingService.getByIdImpl = async () => completeListing()
+
+    await expect(publishListing(makeIdFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeListingService.setStatusCalls).toEqual([
+      { id: ID, status: 'live' },
+    ])
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/')
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/listing/${ID}`)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/admin')
+  })
+
+  it('redirects to /admin?msg=listing-missing when getById returns null', async () => {
+    fakeListingService.getByIdImpl = async () => null
+
+    await expect(publishListing(makeIdFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeListingService.setStatusCalls.length).toBe(0)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+      '/admin?msg=listing-missing',
+    )
+  })
+
+  it('throws Unauthorized when not admin', async () => {
+    adminOk = false
+    await expect(publishListing(makeIdFormData())).rejects.toThrow(
+      'Unauthorized',
+    )
+    expect(fakeListingService.setStatusCalls.length).toBe(0)
+  })
+})
+
+describe('unpublishListing', () => {
+  const ID = '33333333-3333-3333-3333-333333333333'
+
+  function makeIdFormData(): FormData {
+    const fd = new FormData()
+    fd.append('id', ID)
+    return fd
+  }
+
+  it('on a live listing calls setStatus(id, draft) and revalidates both paths', async () => {
+    await expect(unpublishListing(makeIdFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeListingService.setStatusCalls).toEqual([
+      { id: ID, status: 'draft' },
+    ])
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/')
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/listing/${ID}`)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/admin')
+  })
+
+  it('redirects to /admin?msg=listing-missing when setStatus returns null', async () => {
+    fakeListingService.setStatusImpl = async () => null
+
+    await expect(unpublishListing(makeIdFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+      '/admin?msg=listing-missing',
+    )
+    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled()
+  })
+
+  it('throws Unauthorized when not admin', async () => {
+    adminOk = false
+    await expect(unpublishListing(makeIdFormData())).rejects.toThrow(
+      'Unauthorized',
+    )
+    expect(fakeListingService.setStatusCalls.length).toBe(0)
+  })
+})
+
+describe('deleteListing', () => {
+  const ID = '44444444-4444-4444-4444-444444444444'
+
+  function makeIdFormData(): FormData {
+    const fd = new FormData()
+    fd.append('id', ID)
+    return fd
+  }
+
+  it('calls service.delete(id) and revalidates both paths', async () => {
+    await expect(deleteListing(makeIdFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeListingService.deleteCalls).toEqual([ID])
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/')
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/listing/${ID}`)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/admin')
+  })
+
+  it('throws Unauthorized when not admin', async () => {
+    adminOk = false
+    await expect(deleteListing(makeIdFormData())).rejects.toThrow(
+      'Unauthorized',
+    )
+    expect(fakeListingService.deleteCalls.length).toBe(0)
   })
 })

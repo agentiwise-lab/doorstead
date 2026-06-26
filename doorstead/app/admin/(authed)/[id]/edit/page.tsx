@@ -6,13 +6,23 @@ import { listingService } from '@/lib/listings/service'
 
 export default async function EditListingPage({
   params,
+  searchParams,
 }: {
   params: { id: string }
+  searchParams?: { msg?: string; fields?: string }
 }) {
   const listing = await listingService.getById(params.id)
   if (listing === null) {
     notFound()
   }
+
+  const missingFields =
+    searchParams?.msg === 'missing-fields' && searchParams.fields
+      ? searchParams.fields
+          .split(',')
+          .map((f) => f.trim())
+          .filter((f) => f.length > 0)
+      : []
 
   return (
     <section>
@@ -42,6 +52,7 @@ export default async function EditListingPage({
           photoUrls: listing.photoUrls,
         }}
         hiddenFields={{ id: listing.id }}
+        missingFields={missingFields}
       />
     </section>
   )
