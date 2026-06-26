@@ -135,15 +135,37 @@ export class DefaultListingService implements ListingService {
     return toListing(data as ListingRow)
   }
 
-  update(
+  async update(
     id: string,
     input: ListingInput,
     status: ListingStatus,
   ): Promise<Listing | null> {
-    void id
-    void input
-    void status
-    return notImplemented('update')
+    if (!UUID_REGEX.test(id)) return null
+
+    const client = createServerClient()
+    const { data, error } = await client
+      .from('listings')
+      .update({
+        address: input.address,
+        type: input.type,
+        price_gbp: input.priceGbp,
+        beds: input.beds,
+        baths: input.baths,
+        area_sqft: input.areaSqft,
+        description: input.description,
+        photo_urls: input.photoUrls,
+        status,
+      })
+      .eq('id', id)
+      .is('deleted_at', null)
+      .select(
+        'id, address, type, price_gbp, beds, baths, area_sqft, status, description, photo_urls, created_at, updated_at, deleted_at',
+      )
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return null
+    return toListing(data as ListingRow)
   }
 
   setStatus(id: string, status: ListingStatus): Promise<Listing | null> {

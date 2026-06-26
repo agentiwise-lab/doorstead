@@ -2,11 +2,25 @@ import Link from 'next/link'
 import { listingService } from '@/lib/listings/service'
 import { ListingRow } from '@/components/admin/ListingRow'
 
-export default async function AdminHomePage() {
+export default async function AdminHomePage({
+  searchParams,
+}: {
+  searchParams?: { msg?: string }
+}) {
   const listings = await listingService.listAll()
+  const showMissingBanner = searchParams?.msg === 'listing-missing'
 
   return (
     <section>
+      {showMissingBanner && (
+        <div
+          role="status"
+          className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          That listing no longer exists. It may have been deleted in another
+          tab.
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
           Listings

@@ -12,6 +12,10 @@ export type CreateListingState = {
   fieldErrors?: Record<string, string>
 }
 
+export type UpdateListingState = {
+  fieldErrors?: Record<string, string>
+}
+
 function readString(formData: FormData, name: string): string {
   const v = formData.get(name)
   return typeof v === 'string' ? v.trim() : ''
@@ -53,12 +57,11 @@ function toListingInput(value: DraftLike): ListingInput {
   }
 }
 
-export async function createListing(
-  _prev: CreateListingState,
-  formData: FormData,
-): Promise<CreateListingState> {
-  await authService.requireAdmin()
+type ParseResult =
+  | { ok: true; input: ListingInput; status: ListingStatus }
+  | { ok: false; fieldErrors: Record<string, string> }
 
+function parseListingFormData(formData: FormData): ParseResult {
   const intentRaw = formData.get('intent')
   const intent: ListingStatus = intentRaw === 'live' ? 'live' : 'draft'
 
@@ -69,11 +72,10 @@ export async function createListing(
   )
 
   const rawType = readType(formData)
-  const typeForSchema: string | undefined = rawType === null ? undefined : rawType
+  const typeForSchema: string | undefined =
+    rawType === null ? undefined : rawType
 
-  const candidate: Record<string, unknown> = {
-    photoUrls,
-  }
+  const candidate: Record<string, unknown> = { photoUrls }
   const address = readString(formData, 'address')
   if (address) candidate.address = address
   if (typeForSchema !== undefined) candidate.type = typeForSchema
@@ -95,25 +97,62 @@ export async function createListing(
       for (const f of result.missingFields) {
         fieldErrors[f] = humanMessageFor(f)
       }
-      return { fieldErrors }
+      return { ok: false, fieldErrors }
     }
-    await listingService.create(result.value, 'live')
-  } else {
-    const parsed = ListingDraftSchema.safeParse(candidate)
-    if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {}
-      for (const issue of parsed.error.issues) {
-        const top = issue.path[0]
-        if (typeof top === 'string' && !(top in fieldErrors)) {
-          fieldErrors[top] = issue.message
-        }
+    return { ok: true, input: result.value, status: 'live' }
+  }
+
+  const parsed = ListingDraftSchema.safeParse(candidate)
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {}
+    for (const issue of parsed.error.issues) {
+      const top = issue.path[0]
+      if (typeof top === 'string' && !(top in fieldErrors)) {
+        fieldErrors[top] = issue.message
       }
-      return { fieldErrors }
     }
-    await listingService.create(toListingInput(parsed.data), 'draft')
+    return { ok: false, fieldErrors }
+  }
+  return { ok: true, input: toListingInput(parsed.data), status: 'draft' }
+}
+
+export async function createListing(
+  _prev: CreateListingState,
+  formData: FormData,
+): Promise<CreateListingState> {
+  await authService.requireAdmin()
+
+  const parsed = parseListingFormData(formData)
+  if (!parsed.ok) return { fieldErrors: parsed.fieldErrors }
+
+  await listingService.create(parsed.input, parsed.status)
+
+  revalidatePath('/')
+  redirect('/admin')
+}
+
+export async function updateListing(
+  _prev: UpdateListingState,
+  formData: FormData,
+): Promise<UpdateListingState> {
+  await authService.requireAdmin()
+
+  const idRaw = formData.get('id')
+  const id = typeof idRaw === 'string' ? idRaw.trim() : ''
+  if (!id) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  const parsed = parseListingFormData(formData)
+  if (!parsed.ok) return { fieldErrors: parsed.fieldErrors }
+
+  const updated = await listingService.update(id, parsed.input, parsed.status)
+  if (updated === null) {
+    redirect('/admin?msg=listing-missing')
   }
 
   revalidatePath('/')
+  revalidatePath(`/listing/${id}`)
   redirect('/admin')
 }
 

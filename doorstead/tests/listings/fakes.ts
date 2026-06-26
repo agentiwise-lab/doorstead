@@ -6,9 +6,33 @@ import type {
 } from '@/lib/listings/contract'
 
 export type CreateCall = { input: ListingInput; status: ListingStatus }
+export type UpdateCall = {
+  id: string
+  input: ListingInput
+  status: ListingStatus
+}
 
 export class FakeListingService implements ListingService {
   createCalls: CreateCall[] = []
+  updateCalls: UpdateCall[] = []
+  updateImpl: (
+    id: string,
+    input: ListingInput,
+    status: ListingStatus,
+  ) => Promise<Listing | null> = async (id, input, status) => ({
+    id,
+    address: input.address,
+    type: input.type,
+    priceGbp: input.priceGbp,
+    beds: input.beds,
+    baths: input.baths,
+    areaSqft: input.areaSqft,
+    status,
+    description: input.description,
+    photoUrls: input.photoUrls,
+    createdAt: '2026-06-26T00:00:00Z',
+    updatedAt: '2026-06-26T00:00:00Z',
+  })
   createImpl: (input: ListingInput, status: ListingStatus) => Promise<Listing> =
     async (input, status) => ({
       id: '00000000-0000-0000-0000-000000000001',
@@ -39,11 +63,12 @@ export class FakeListingService implements ListingService {
     return this.createImpl(input, status)
   }
   async update(
-    _id: string,
-    _input: ListingInput,
-    _status: ListingStatus,
+    id: string,
+    input: ListingInput,
+    status: ListingStatus,
   ): Promise<Listing | null> {
-    throw new Error('FakeListingService.update not stubbed')
+    this.updateCalls.push({ id, input, status })
+    return this.updateImpl(id, input, status)
   }
   async setStatus(
     _id: string,

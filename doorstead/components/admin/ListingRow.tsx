@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { Listing } from '@/lib/listings/contract'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 
@@ -32,7 +33,14 @@ export function ListingRow({ listing }: { listing: Listing }) {
       <td className="px-4 py-3 text-sm text-gray-500">
         {formatUpdatedAt(listing.updatedAt)}
       </td>
-      <td className="px-4 py-3 text-sm text-right" />
+      <td className="px-4 py-3 text-sm text-right">
+        <Link
+          href={`/admin/${listing.id}/edit`}
+          className="text-sm text-gray-700 underline hover:text-gray-900"
+        >
+          Edit
+        </Link>
+      </td>
     </tr>
   )
 }
