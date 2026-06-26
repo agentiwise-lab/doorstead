@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useFormState, useFormStatus } from 'react-dom'
 import type {
   ListingInput,
@@ -10,6 +11,8 @@ import type {
   CreateListingState,
   UpdateListingState,
 } from '@/lib/listings/actions'
+import { serializePhotoUrls } from '@/lib/listings/photo-urls'
+import { ImageUrlList } from './ImageUrlList'
 
 type FormState = CreateListingState | UpdateListingState
 
@@ -114,9 +117,11 @@ export function ListingForm({
   const [state, formAction] = useFormState<FormState, FormData>(action, {
     fieldErrors: {},
   })
+  const [photoUrls, setPhotoUrls] = useState<string[]>(
+    initialValues?.photoUrls ?? [],
+  )
 
   const errors = state.fieldErrors ?? {}
-  const initialPhotos = (initialValues?.photoUrls ?? []).join('\n')
   const missing = new Set(missingFields ?? [])
 
   const errorFor = (field: string): string | undefined => {
@@ -272,20 +277,17 @@ export function ListingForm({
       </div>
 
       <div>
-        <label
-          htmlFor="photoUrls"
-          className="block text-sm font-medium text-gray-700"
-        >
+        <label className="block text-sm font-medium text-gray-700">
           Photo URLs
         </label>
-        <p className="mt-1 text-xs text-gray-500">One URL per line.</p>
-        <textarea
-          id="photoUrls"
+        <input
+          type="hidden"
           name="photoUrls"
-          rows={6}
-          defaultValue={initialPhotos}
-          className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+          value={serializePhotoUrls(photoUrls)}
         />
+        <div className="mt-1">
+          <ImageUrlList urls={photoUrls} onChange={setPhotoUrls} />
+        </div>
         <FieldError message={errorFor('photoUrls')} />
       </div>
 
