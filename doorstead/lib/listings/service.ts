@@ -24,6 +24,9 @@ type ListingRow = {
   deleted_at: string | null
 }
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 const LISTING_TYPES: readonly ListingType[] = [
   'House',
   'Flat',
@@ -80,9 +83,21 @@ export class DefaultListingService implements ListingService {
     return notImplemented('listAll')
   }
 
-  getById(id: string): Promise<Listing | null> {
-    void id
-    return notImplemented('getById')
+  async getById(id: string): Promise<Listing | null> {
+    if (!UUID_REGEX.test(id)) return null
+
+    const { data, error } = await this.client
+      .from('listings')
+      .select(
+        'id, address, type, price_gbp, beds, baths, area_sqft, status, description, photo_urls, created_at, updated_at, deleted_at',
+      )
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return null
+    return toListing(data as ListingRow)
   }
 
   create(input: ListingInput, status: ListingStatus): Promise<Listing> {
