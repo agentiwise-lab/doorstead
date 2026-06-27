@@ -4,6 +4,19 @@ import { PhotoGallery } from './PhotoGallery'
 import { InquiryForm } from './InquiryForm'
 import { PublicHeader } from '@/components/ui/PublicHeader'
 
+function BackButton() {
+  return (
+    <Link
+      href="/"
+      aria-label="Back to listings"
+      className="inline-flex items-center rounded-md border border-brand-200 bg-white px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+    >
+      <span aria-hidden="true" className="mr-1.5">&#8592;</span>
+      Back
+    </Link>
+  )
+}
+
 const formatPrice = (price: number | null): string => {
   if (price === null) return 'Price on request'
   return `£${price.toLocaleString('en-GB')}`
@@ -39,24 +52,7 @@ export function ListingDetail({ listing }: { listing: Listing }) {
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <PublicHeader />
-
-      <div className="border-b border-brand-100 bg-white">
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-2.5 sm:px-6">
-          <Link
-            href="/"
-            className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-brand-600 transition hover:text-brand-800"
-          >
-            <span aria-hidden="true">&larr;</span> Back
-          </Link>
-          <span aria-hidden="true" className="text-brand-200">
-            /
-          </span>
-          <h1 className="truncate text-sm font-medium text-brand-900">
-            {address}
-          </h1>
-        </div>
-      </div>
+      <PublicHeader contextLabel={address} action={<BackButton />} />
 
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         <header className="mb-6">
