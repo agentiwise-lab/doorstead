@@ -5,3 +5,7 @@ export function parsePhotoUrls(raw: string): string[] {
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
 }
+
+export function serializePhotoUrls(urls: string[]): string {
+  return urls.map((u) => u.replace(/\r?\n/g, '')).join('\n')
+}

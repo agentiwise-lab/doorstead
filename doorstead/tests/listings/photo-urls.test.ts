@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parsePhotoUrls } from '@/lib/listings/photo-urls'
+import { parsePhotoUrls, serializePhotoUrls } from '@/lib/listings/photo-urls'
 
 describe('parsePhotoUrls', () => {
   it('returns [] for empty input', () => {
@@ -37,6 +37,44 @@ describe('parsePhotoUrls', () => {
       'https://a.com/1.jpg',
       'https://b.com/2.jpg',
       'https://a.com/1.jpg',
+    ])
+  })
+})
+
+describe('serializePhotoUrls', () => {
+  it('returns empty string for empty array', () => {
+    expect(serializePhotoUrls([])).toBe('')
+  })
+
+  it('returns the URL with no trailing newline for a single entry', () => {
+    expect(serializePhotoUrls(['https://a.com/1.jpg'])).toBe(
+      'https://a.com/1.jpg',
+    )
+  })
+
+  it('joins multiple URLs with newline and no trailing newline', () => {
+    expect(
+      serializePhotoUrls(['https://a.com/1.jpg', 'https://b.com/2.jpg']),
+    ).toBe('https://a.com/1.jpg\nhttps://b.com/2.jpg')
+  })
+
+  it('round-trips through parsePhotoUrls', () => {
+    const urls = [
+      'https://a.com/1.jpg',
+      'https://b.com/2.jpg',
+      'https://c.com/3.jpg',
+    ]
+    expect(parsePhotoUrls(serializePhotoUrls(urls))).toEqual(urls)
+  })
+
+  it('strips embedded newlines from each url so they cannot fragment on round-trip', () => {
+    const out = serializePhotoUrls([
+      'https://a.com/1.jpg\nhttps://b.com/2.jpg',
+      'https://c.com/3.jpg',
+    ])
+    expect(parsePhotoUrls(out)).toEqual([
+      'https://a.com/1.jpghttps://b.com/2.jpg',
+      'https://c.com/3.jpg',
     ])
   })
 })

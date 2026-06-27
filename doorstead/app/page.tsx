@@ -2,7 +2,7 @@ import { listingService } from '@/lib/listings/service'
 import { ListingCard } from '@/components/listing/ListingCard'
 import { PublicHeader } from '@/components/ui/PublicHeader'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default async function HomePage() {
   const listings = await listingService.listLive()
