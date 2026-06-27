@@ -52,7 +52,12 @@ export function ListingDetail({ listing }: { listing: Listing }) {
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <PublicHeader contextLabel={address} action={<BackButton />} />
+      <PublicHeader
+        contextLabel={address}
+        contextLabelAs="h1"
+        action={<BackButton />}
+        maxWidth="4xl"
+      />
 
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         <header className="mb-6">

@@ -2,27 +2,37 @@ import type { ReactNode } from 'react'
 
 interface PublicHeaderProps {
   contextLabel?: string
+  contextLabelAs?: 'h1' | 'p'
   action?: ReactNode
+  maxWidth?: '4xl' | '6xl'
 }
 
-export function PublicHeader({ contextLabel, action }: PublicHeaderProps = {}) {
+export function PublicHeader({
+  contextLabel,
+  contextLabelAs = 'p',
+  action,
+  maxWidth = '6xl',
+}: PublicHeaderProps = {}) {
+  const ContextEl = contextLabelAs === 'h1' ? 'h1' : 'p'
+  const widthClass = maxWidth === '4xl' ? 'max-w-4xl' : 'max-w-6xl'
+
   return (
     <header className="border-b border-brand-100 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center px-4 py-3 sm:px-6">
-        <p className="shrink-0 text-sm font-semibold tracking-[0.2em] text-brand-700 uppercase">
+      <div
+        className={`mx-auto grid grid-cols-3 items-center gap-4 px-4 py-3 sm:px-6 ${widthClass}`}
+      >
+        <p className="col-start-1 text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">
           Marlowe &amp; Hart
         </p>
 
         {contextLabel && (
-          <p className="mx-4 min-w-0 flex-1 truncate text-center text-sm font-medium text-brand-900">
+          <ContextEl className="col-start-2 min-w-0 truncate text-center text-sm font-medium text-brand-900">
             {contextLabel}
-          </p>
+          </ContextEl>
         )}
 
         {action && (
-          <div className={contextLabel ? 'shrink-0' : 'ml-auto'}>
-            {action}
-          </div>
+          <div className="col-start-3 justify-self-end">{action}</div>
         )}
       </div>
     </header>
