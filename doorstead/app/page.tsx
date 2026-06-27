@@ -1,5 +1,6 @@
 import { listingService } from '@/lib/listings/service'
 import { ListingCard } from '@/components/listing/ListingCard'
+import { PublicHeader } from '@/components/ui/PublicHeader'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,20 +9,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <header className="border-b border-brand-100 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">
-            Marlowe &amp; Hart
-          </p>
-          <h1 className="mt-3 font-display text-4xl font-semibold tracking-tight text-brand-900 sm:text-5xl">
-            Properties for sale
-          </h1>
-          <p className="mt-3 max-w-xl text-base leading-relaxed text-gray-600">
-            A curated selection of homes from our portfolio. Find a property you
-            love and enquire in seconds.
-          </p>
-        </div>
-      </header>
+      <PublicHeader />
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         {listings.length === 0 ? (

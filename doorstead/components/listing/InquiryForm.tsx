@@ -128,7 +128,16 @@ export function InquiryForm({ listingId }: { listingId: string }) {
           </p>
         )}
 
-        <SubmitButton />
+        <div className="flex flex-wrap items-center gap-3">
+          <SubmitButton />
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:text-gray-900"
+          >
+            Cancel
+          </button>
+        </div>
       </form>
     </div>
   )

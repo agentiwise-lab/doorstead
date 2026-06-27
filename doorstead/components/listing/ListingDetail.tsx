@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Listing } from '@/lib/listings/contract'
 import { PhotoGallery } from './PhotoGallery'
 import { InquiryForm } from './InquiryForm'
+import { PublicHeader } from '@/components/ui/PublicHeader'
 
 const formatPrice = (price: number | null): string => {
   if (price === null) return 'Price on request'
@@ -38,25 +39,32 @@ export function ListingDetail({ listing }: { listing: Listing }) {
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="mb-6">
+      <PublicHeader />
+
+      <div className="border-b border-brand-100 bg-white">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-2.5 sm:px-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 transition hover:text-brand-800"
+            className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-brand-600 transition hover:text-brand-800"
           >
-            <span aria-hidden="true">&larr;</span> Back to all properties
+            <span aria-hidden="true">&larr;</span> Back
           </Link>
+          <span aria-hidden="true" className="text-brand-200">
+            /
+          </span>
+          <h1 className="truncate text-sm font-medium text-brand-900">
+            {address}
+          </h1>
         </div>
+      </div>
 
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         <header className="mb-6">
           {listing.type && (
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">
               {listing.type}
             </p>
           )}
-          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-brand-900 sm:text-4xl">
-            {address}
-          </h1>
         </header>
 
         <section className="mb-8">
