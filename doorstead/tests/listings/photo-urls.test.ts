@@ -66,4 +66,15 @@ describe('serializePhotoUrls', () => {
     ]
     expect(parsePhotoUrls(serializePhotoUrls(urls))).toEqual(urls)
   })
+
+  it('strips embedded newlines from each url so they cannot fragment on round-trip', () => {
+    const out = serializePhotoUrls([
+      'https://a.com/1.jpg\nhttps://b.com/2.jpg',
+      'https://c.com/3.jpg',
+    ])
+    expect(parsePhotoUrls(out)).toEqual([
+      'https://a.com/1.jpghttps://b.com/2.jpg',
+      'https://c.com/3.jpg',
+    ])
+  })
 })

@@ -7,5 +7,5 @@ export function parsePhotoUrls(raw: string): string[] {
 }
 
 export function serializePhotoUrls(urls: string[]): string {
-  return urls.join('\n')
+  return urls.map((u) => u.replace(/\r?\n/g, '')).join('\n')
 }

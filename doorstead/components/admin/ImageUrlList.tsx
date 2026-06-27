@@ -1,5 +1,12 @@
 'use client'
 
+import { useState } from 'react'
+
+type Row = { id: string; url: string }
+
+let rowCounter = 0
+const nextRowId = () => `img-${++rowCounter}`
+
 export function ImageUrlList({
   urls,
   onChange,
@@ -7,33 +14,39 @@ export function ImageUrlList({
   urls: string[]
   onChange: (urls: string[]) => void
 }) {
-  function update(index: number, value: string) {
-    const next = [...urls]
-    next[index] = value
-    onChange(next)
+  const [rows, setRows] = useState<Row[]>(() =>
+    urls.map((url) => ({ id: nextRowId(), url })),
+  )
+
+  function commit(next: Row[]) {
+    setRows(next)
+    onChange(next.map((r) => r.url))
   }
 
-  function remove(index: number) {
-    const next = urls.filter((_, i) => i !== index)
-    onChange(next)
+  function update(id: string, value: string) {
+    commit(rows.map((r) => (r.id === id ? { ...r, url: value } : r)))
+  }
+
+  function remove(id: string) {
+    commit(rows.filter((r) => r.id !== id))
   }
 
   function moveUp(index: number) {
     if (index === 0) return
-    const next = [...urls]
+    const next = [...rows]
     ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
-    onChange(next)
+    commit(next)
   }
 
   function moveDown(index: number) {
-    if (index === urls.length - 1) return
-    const next = [...urls]
+    if (index === rows.length - 1) return
+    const next = [...rows]
     ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
-    onChange(next)
+    commit(next)
   }
 
   function addImage() {
-    onChange([...urls, ''])
+    commit([...rows, { id: nextRowId(), url: '' }])
   }
 
   const inputClass =
@@ -43,12 +56,12 @@ export function ImageUrlList({
 
   return (
     <div className="space-y-2">
-      {urls.map((url, index) => (
-        <div key={index} className="flex items-center gap-2">
+      {rows.map((row, index) => (
+        <div key={row.id} className="flex items-center gap-2">
           <input
             type="text"
-            value={url}
-            onChange={(e) => update(index, e.target.value)}
+            value={row.url}
+            onChange={(e) => update(row.id, e.target.value)}
             placeholder="https://example.com/photo.jpg"
             aria-label={`Photo URL ${index + 1}`}
             className={inputClass}
@@ -70,7 +83,7 @@ export function ImageUrlList({
           <button
             type="button"
             onClick={() => moveDown(index)}
-            disabled={index === urls.length - 1}
+            disabled={index === rows.length - 1}
             aria-label="Move down"
             className={btnClass}
           >
@@ -78,7 +91,7 @@ export function ImageUrlList({
           </button>
           <button
             type="button"
-            onClick={() => remove(index)}
+            onClick={() => remove(row.id)}
             aria-label="Remove"
             className={`${btnClass} text-red-600 hover:bg-red-50`}
           >

@@ -276,10 +276,10 @@ export function ListingForm({
         <FieldError message={errorFor('description')} />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">
+      <fieldset>
+        <legend className="block text-sm font-medium text-gray-700">
           Photo URLs
-        </label>
+        </legend>
         <input
           type="hidden"
           name="photoUrls"
@@ -289,7 +289,7 @@ export function ListingForm({
           <ImageUrlList urls={photoUrls} onChange={setPhotoUrls} />
         </div>
         <FieldError message={errorFor('photoUrls')} />
-      </div>
+      </fieldset>
 
       <SubmitButtons mode={mode} initialStatus={initialStatus} />
     </form>
