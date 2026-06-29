@@ -1,4 +1,4 @@
-docs/
+/docs/
 .DS_Store
 
 # Track .claude config (settings), but not runtime state or machine-local symlinks
