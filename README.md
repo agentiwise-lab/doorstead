@@ -11,7 +11,13 @@ An admin uploads one image, Doorstead stores it in a private bucket plus one `li
 - Signed-URL TTL -> 1 hour.
 - `getImagesForRender` owned by `ListingService`, depends on the `MediaService` contract only.
 - Migration written, not applied: the shared dev database is untouched, apply it on deploy.
-- A draft listing's images do not preview in admin (the anon SELECT is live-scoped); deferred to a later unit's admin UI, outside the tracer's acceptance.
+
+## Code review
+`/review-code` on the tracer diff. Full review: `doorstead/docs/code-reviews/age-114-tracer.md`. Spec-compliance FAIL, code-quality PASS: the tests were green, the review caught what they could not.
+- Admin edit page 500s on a draft (blocker): `getImagesForRender` signs via anon, anon RLS is live-only -> sign via the server client on admin routes (client keyed off trust context, not operation).
+- Public read mixes clients (minor): `listing_media` read via the server client on the public page -> route it through the anon client.
+- One bad key fails the whole page via `Promise.all` (minor): deferred to Unit 3.
+- Verified clean: admin gate, RLS pattern, real contract tests, no slop.
 
 ## Next
 The series continues with loop engineering architecture (video 5).
