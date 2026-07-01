@@ -1,13 +1,23 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
+import { createSignedUrl } from '@/lib/db/storage'
+import { mediaService as defaultMediaService } from '@/lib/media/service'
+import type { MediaService } from '@/lib/media/contract'
 import type {
   Listing,
   ListingInput,
   ListingService,
   ListingStatus,
   ListingType,
+  RenderImage,
 } from './contract'
+
+// Signed links are short-lived: long enough to render a page, short enough that
+// a leaked URL expires quickly. One hour matches the public page's freshness.
+const SIGNED_URL_TTL_SECONDS = 60 * 60
+
+type SignUrl = (key: string, expiresInSeconds: number) => Promise<string>
 
 type ListingRow = {
   id: string
@@ -60,7 +70,28 @@ const toListing = (row: ListingRow): Listing => ({
 })
 
 export class DefaultListingService implements ListingService {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(
+    private readonly client: SupabaseClient,
+    private readonly media: MediaService = defaultMediaService,
+    private readonly signUrl: SignUrl = createSignedUrl,
+  ) {}
+
+  async getImagesForRender(listingId: string): Promise<RenderImage[]> {
+    const stored = await this.media.listForListing(listingId)
+    const storedImages: RenderImage[] = await Promise.all(
+      stored.map(async (image) => ({
+        url: await this.signUrl(image.originalKey, SIGNED_URL_TTL_SECONDS),
+        isFloorplan: image.isFloorplan,
+      })),
+    )
+
+    const listing = await this.getById(listingId)
+    const legacyImages: RenderImage[] = (listing?.photoUrls ?? []).map(
+      (url) => ({ url, isFloorplan: false }),
+    )
+
+    return [...storedImages, ...legacyImages]
+  }
 
   async listLive(): Promise<Listing[]> {
     const { data, error } = await this.client

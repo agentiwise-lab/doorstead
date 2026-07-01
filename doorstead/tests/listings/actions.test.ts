@@ -31,6 +31,10 @@ vi.mock('@/lib/listings/service', () => ({
   listingService: fakeListingService,
 }))
 
+vi.mock('@/lib/media/service', () => ({
+  mediaService: {},
+}))
+
 const {
   createListing,
   updateListing,

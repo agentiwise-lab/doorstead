@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { authService } from '@/lib/auth/service'
 import { listingService } from '@/lib/listings/service'
+import { mediaService } from '@/lib/media/service'
 import type { ListingInput, ListingStatus } from './contract'
 import { parsePhotoUrls } from './photo-urls'
 import { ListingDraftSchema, validateForPublish } from './schema'
@@ -214,6 +215,31 @@ export async function unpublishListing(formData: FormData): Promise<void> {
   revalidatePath('/')
   revalidatePath(`/listing/${id}`)
   redirect('/admin')
+}
+
+export async function uploadListingImage(formData: FormData): Promise<void> {
+  await authService.requireAdmin()
+
+  const idRaw = formData.get('id')
+  const id = typeof idRaw === 'string' ? idRaw.trim() : ''
+  if (!id) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  const image = formData.get('image')
+  if (!(image instanceof File) || image.size === 0) {
+    redirect(`/admin/${id}/edit`)
+  }
+
+  const bytes = new Uint8Array(await image.arrayBuffer())
+  await mediaService.storeImage(id, {
+    bytes,
+    contentType: image.type,
+    filename: image.name,
+  })
+
+  revalidatePath(`/listing/${id}`)
+  redirect(`/admin/${id}/edit`)
 }
 
 export async function deleteListing(formData: FormData): Promise<void> {

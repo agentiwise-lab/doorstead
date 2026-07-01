@@ -38,7 +38,13 @@ function Fact({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function ListingDetail({ listing }: { listing: Listing }) {
+export function ListingDetail({
+  listing,
+  imageUrls,
+}: {
+  listing: Listing
+  imageUrls: string[]
+}) {
   const address = listing.address ?? 'Address available on request'
   const area = formatArea(listing.areaSqft)
 
@@ -69,7 +75,7 @@ export function ListingDetail({ listing }: { listing: Listing }) {
         </header>
 
         <section className="mb-8">
-          <PhotoGallery photoUrls={listing.photoUrls} alt={address} />
+          <PhotoGallery photoUrls={imageUrls} alt={address} />
         </section>
 
         <section className="mb-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">

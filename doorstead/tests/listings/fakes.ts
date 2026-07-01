@@ -3,6 +3,7 @@ import type {
   ListingInput,
   ListingService,
   ListingStatus,
+  RenderImage,
 } from '@/lib/listings/contract'
 
 export type CreateCall = { input: ListingInput; status: ListingStatus }
@@ -19,6 +20,8 @@ export class FakeListingService implements ListingService {
   setStatusCalls: SetStatusCall[] = []
   deleteCalls: string[] = []
   getByIdImpl: (id: string) => Promise<Listing | null> = async () => null
+  getImagesForRenderImpl: (id: string) => Promise<RenderImage[]> = async () =>
+    []
   setStatusImpl: (
     id: string,
     status: ListingStatus,
@@ -79,6 +82,9 @@ export class FakeListingService implements ListingService {
   }
   async getById(id: string): Promise<Listing | null> {
     return this.getByIdImpl(id)
+  }
+  async getImagesForRender(id: string): Promise<RenderImage[]> {
+    return this.getImagesForRenderImpl(id)
   }
   async create(input: ListingInput, status: ListingStatus): Promise<Listing> {
     this.createCalls.push({ input, status })

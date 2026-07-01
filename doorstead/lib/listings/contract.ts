@@ -34,10 +34,16 @@ export interface ListingInput {
   photoUrls: string[]
 }
 
+export interface RenderImage {
+  url: string
+  isFloorplan: boolean
+}
+
 export interface ListingService {
   listLive(): Promise<Listing[]>
   listAll(): Promise<Listing[]>
   getById(id: string): Promise<Listing | null>
+  getImagesForRender(listingId: string): Promise<RenderImage[]>
   create(input: ListingInput, status: ListingStatus): Promise<Listing>
   update(
     id: string,
