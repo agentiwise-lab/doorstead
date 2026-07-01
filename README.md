@@ -1,19 +1,24 @@
-# Reviewing the Plan and Creating Issues
+# Implementing an Issue
 
-_You are on `03_end`._
+_Adding image uploads to Doorstead. You are on `04_begin`._
 
-## Findings and decisions
-Full review: `doorstead/docs/plan-reviews/listing-image-uploads.md`. Verdict: revise, applied; every fix localized to Unit 1.
-- Private-bucket URL unsignable with the anon key (blocker) -> scoped anon SELECT on `storage.objects`, live listings only.
-- `storage.ts` client per method unstated (major) -> server client to upload, anon client to sign.
-- `getImagesForRender` ownership ambiguous (major) -> on `ListingService`, depends on `MediaService` contract only.
-- Bucket-in-migration, legacy passthrough, unit ordering -> verified safe.
+## Starting point
+The PRD, plan, review, and seven issues (AGE-114 to AGE-120) are in place. No code yet.
 
-## Produced
-- The review, and the plan revised per its three findings.
-- Seven Linear issues, AGE-114 to AGE-120 (`feat:listing-image-uploads`), AGE-120 held for sign-off (destructive). Manifest: `doorstead/docs/issues/listing-image-uploads.md`.
+## The job
+Implement the tracer, AGE-114, by hand: the thinnest end-to-end slice (an admin uploads one image, Doorstead stores it, the public page renders it via a signed link). Backend is red-green-refactor. The feature branch is cut from here.
 
-## Next
+## Run
+```
+/implement AGE-114
+```
+
+## Result
+- `feat/listing-image-uploads` cut from `04_begin`; the tracer built (storage adapter, `MediaService`, upload action, `getImagesForRender`, migration) with contract-level tests green.
+- Merged into `04_end`; AGE-114 marked done.
+
+## Check
 ```bash
-git checkout 04_begin
+git diff 04_begin..04_end
+git checkout 04_end
 ```
