@@ -1,5 +1,6 @@
 import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
+import type { MediaContext } from '@/lib/media/contract'
 
 const BUCKET = 'listing-media'
 
@@ -19,14 +20,19 @@ export async function uploadObject(
   if (error) throw error
 }
 
-// Read path: anon client, permitted by the scoped anon SELECT policy that only
-// exposes objects belonging to a live listing. Minting the signed URL as anon
-// is what proves the public page could read it.
+// Read path: the client is chosen by the caller's trust context, NOT the
+// operation. Public renders sign as anon (the scoped anon SELECT policy proves
+// the object belongs to a live listing, which is exactly what a visitor may
+// read). Admin renders sign as the server client so a DRAFT listing's objects
+// resolve too — the anon policy denies drafts, so signing a draft as anon would
+// 404 and 500 the edit page.
 export async function createSignedUrl(
   key: string,
   expiresInSeconds: number,
+  context: MediaContext,
 ): Promise<string> {
-  const { data, error } = await anonClient.storage
+  const client = context === 'admin' ? createServerClient() : anonClient
+  const { data, error } = await client.storage
     .from(BUCKET)
     .createSignedUrl(key, expiresInSeconds)
 

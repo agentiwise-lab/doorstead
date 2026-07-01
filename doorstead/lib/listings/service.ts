@@ -3,7 +3,7 @@ import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
 import { createSignedUrl } from '@/lib/db/storage'
 import { mediaService as defaultMediaService } from '@/lib/media/service'
-import type { MediaService } from '@/lib/media/contract'
+import type { MediaContext, MediaService } from '@/lib/media/contract'
 import type {
   Listing,
   ListingInput,
@@ -17,7 +17,11 @@ import type {
 // a leaked URL expires quickly. One hour matches the public page's freshness.
 const SIGNED_URL_TTL_SECONDS = 60 * 60
 
-type SignUrl = (key: string, expiresInSeconds: number) => Promise<string>
+type SignUrl = (
+  key: string,
+  expiresInSeconds: number,
+  context: MediaContext,
+) => Promise<string>
 
 type ListingRow = {
   id: string
@@ -76,11 +80,18 @@ export class DefaultListingService implements ListingService {
     private readonly signUrl: SignUrl = createSignedUrl,
   ) {}
 
-  async getImagesForRender(listingId: string): Promise<RenderImage[]> {
-    const stored = await this.media.listForListing(listingId)
+  async getImagesForRender(
+    listingId: string,
+    context: MediaContext,
+  ): Promise<RenderImage[]> {
+    const stored = await this.media.listForListing(listingId, context)
     const storedImages: RenderImage[] = await Promise.all(
       stored.map(async (image) => ({
-        url: await this.signUrl(image.originalKey, SIGNED_URL_TTL_SECONDS),
+        url: await this.signUrl(
+          image.originalKey,
+          SIGNED_URL_TTL_SECONDS,
+          context,
+        ),
         isFloorplan: image.isFloorplan,
       })),
     )

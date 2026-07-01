@@ -1,6 +1,12 @@
+import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
 import { uploadObject } from '@/lib/db/storage'
-import type { MediaService, StoredImage, UploadFile } from './contract'
+import type {
+  MediaContext,
+  MediaService,
+  StoredImage,
+  UploadFile,
+} from './contract'
 
 type MediaRow = {
   id: string
@@ -60,8 +66,14 @@ export class DefaultMediaService implements MediaService {
     return toStoredImage(data as MediaRow)
   }
 
-  async listForListing(listingId: string): Promise<StoredImage[]> {
-    const client = createServerClient()
+  async listForListing(
+    listingId: string,
+    context: MediaContext,
+  ): Promise<StoredImage[]> {
+    // Public reads go through the anon client so RLS scopes them to live
+    // listings via listing_media_public_read (migration 0003); admin reads use
+    // the server client so drafts resolve. Never mix clients across contexts.
+    const client = context === 'admin' ? createServerClient() : anonClient
     const { data, error } = await client
       .from('listing_media')
       .select('id, listing_id, original_key, position, is_cover, is_floorplan')

@@ -17,7 +17,7 @@ export default async function EditListingPage({
     notFound()
   }
 
-  const images = await listingService.getImagesForRender(listing.id)
+  const images = await listingService.getImagesForRender(listing.id, 'admin')
 
   const missingFields =
     searchParams?.msg === 'missing-fields' && searchParams.fields

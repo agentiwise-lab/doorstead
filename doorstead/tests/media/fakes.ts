@@ -1,15 +1,20 @@
 import type {
+  MediaContext,
   MediaService,
   StoredImage,
   UploadFile,
 } from '@/lib/media/contract'
 
 export type StoreImageCall = { listingId: string; file: UploadFile }
+export type ListForListingCall = { listingId: string; context: MediaContext }
 
 export class FakeMediaService implements MediaService {
   storeImageCalls: StoreImageCall[] = []
-  listForListingImpl: (listingId: string) => Promise<StoredImage[]> =
-    async () => []
+  listForListingCalls: ListForListingCall[] = []
+  listForListingImpl: (
+    listingId: string,
+    context: MediaContext,
+  ) => Promise<StoredImage[]> = async () => []
   storeImageImpl: (
     listingId: string,
     file: UploadFile,
@@ -26,7 +31,11 @@ export class FakeMediaService implements MediaService {
     return this.storeImageImpl(listingId, file)
   }
 
-  async listForListing(listingId: string): Promise<StoredImage[]> {
-    return this.listForListingImpl(listingId)
+  async listForListing(
+    listingId: string,
+    context: MediaContext,
+  ): Promise<StoredImage[]> {
+    this.listForListingCalls.push({ listingId, context })
+    return this.listForListingImpl(listingId, context)
   }
 }

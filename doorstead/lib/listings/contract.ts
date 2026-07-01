@@ -1,3 +1,7 @@
+import type { MediaContext } from '@/lib/media/contract'
+
+export type { MediaContext }
+
 export type ListingType =
   | 'House'
   | 'Flat'
@@ -43,7 +47,10 @@ export interface ListingService {
   listLive(): Promise<Listing[]>
   listAll(): Promise<Listing[]>
   getById(id: string): Promise<Listing | null>
-  getImagesForRender(listingId: string): Promise<RenderImage[]>
+  getImagesForRender(
+    listingId: string,
+    context: MediaContext,
+  ): Promise<RenderImage[]>
   create(input: ListingInput, status: ListingStatus): Promise<Listing>
   update(
     id: string,

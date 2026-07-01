@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { FakeMediaService } from '../media/fakes'
-import type { StoredImage } from '@/lib/media/contract'
+import type { MediaContext, StoredImage } from '@/lib/media/contract'
 import type { Listing } from '@/lib/listings/contract'
 
 vi.mock('server-only', () => ({}))
@@ -48,13 +48,15 @@ function baseListing(over: Partial<Listing>): Listing {
 
 let fakeMediaService: FakeMediaService
 let signCalls: string[]
+let signContexts: MediaContext[]
 
 function makeService(listing: Listing | null) {
   const service = new DefaultListingService(
     {} as never,
     fakeMediaService,
-    async (key: string) => {
+    async (key: string, _ttl: number, context: MediaContext) => {
       signCalls.push(key)
+      signContexts.push(context)
       return `https://signed.example/${key}`
     },
   )
@@ -67,6 +69,7 @@ function makeService(listing: Listing | null) {
 beforeEach(() => {
   fakeMediaService = new FakeMediaService()
   signCalls = []
+  signContexts = []
 })
 
 describe('getImagesForRender', () => {
@@ -77,7 +80,7 @@ describe('getImagesForRender', () => {
     ]
     const service = makeService(baseListing({ photoUrls: [] }))
 
-    const result = await service.getImagesForRender(LISTING_ID)
+    const result = await service.getImagesForRender(LISTING_ID, 'public')
 
     expect(result).toEqual([
       { url: 'https://signed.example/listing/x/a.jpg', isFloorplan: false },
@@ -92,7 +95,7 @@ describe('getImagesForRender', () => {
       baseListing({ photoUrls: ['https://legacy.example/1.jpg'] }),
     )
 
-    const result = await service.getImagesForRender(LISTING_ID)
+    const result = await service.getImagesForRender(LISTING_ID, 'public')
 
     expect(result).toEqual([
       { url: 'https://legacy.example/1.jpg', isFloorplan: false },
@@ -108,7 +111,7 @@ describe('getImagesForRender', () => {
       baseListing({ photoUrls: ['https://legacy.example/1.jpg'] }),
     )
 
-    const result = await service.getImagesForRender(LISTING_ID)
+    const result = await service.getImagesForRender(LISTING_ID, 'public')
 
     expect(result).toEqual([
       { url: 'https://signed.example/listing/x/a.jpg', isFloorplan: false },
@@ -120,8 +123,36 @@ describe('getImagesForRender', () => {
     fakeMediaService.listForListingImpl = async () => []
     const service = makeService(null)
 
-    const result = await service.getImagesForRender(LISTING_ID)
+    const result = await service.getImagesForRender(LISTING_ID, 'public')
 
     expect(result).toEqual([])
+  })
+
+  it('threads the admin context to both the media read and the signer', async () => {
+    fakeMediaService.listForListingImpl = async () => [
+      storedImage({ id: 'a', originalKey: 'listing/x/a.jpg' }),
+    ]
+    const service = makeService(baseListing({ status: 'draft' }))
+
+    await service.getImagesForRender(LISTING_ID, 'admin')
+
+    expect(fakeMediaService.listForListingCalls).toEqual([
+      { listingId: LISTING_ID, context: 'admin' },
+    ])
+    expect(signContexts).toEqual(['admin'])
+  })
+
+  it('threads the public context to both the media read and the signer', async () => {
+    fakeMediaService.listForListingImpl = async () => [
+      storedImage({ id: 'a', originalKey: 'listing/x/a.jpg' }),
+    ]
+    const service = makeService(baseListing({ photoUrls: [] }))
+
+    await service.getImagesForRender(LISTING_ID, 'public')
+
+    expect(fakeMediaService.listForListingCalls).toEqual([
+      { listingId: LISTING_ID, context: 'public' },
+    ])
+    expect(signContexts).toEqual(['public'])
   })
 })
