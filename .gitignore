@@ -1,8 +1,7 @@
 /docs/
 .DS_Store
 
-# Track .claude config (settings), but not runtime state or machine-local symlinks
+# Track .claude config (settings) and the bundled skills, but not runtime state
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 .claude/*.lock
-.claude/skills/
