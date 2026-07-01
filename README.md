@@ -11,7 +11,7 @@ Full review: `doorstead/docs/plan-reviews/listing-image-uploads.md`. Verdict: re
 
 ## Produced
 - The review, and the plan revised per its three findings.
-- Next in this video: the seven Linear issues (`feat:listing-image-uploads`) plus a `doorstead/docs/issues/listing-image-uploads.md` manifest.
+- Seven Linear issues, AGE-114 to AGE-120 (`feat:listing-image-uploads`), AGE-120 held for sign-off (destructive). Manifest: `doorstead/docs/issues/listing-image-uploads.md`.
 
 ## Next
 ```bash
