@@ -2,7 +2,7 @@
 
 Source: docs/prds/listing-image-uploads.md
 Feature key: listing-image-uploads  (one feature = this plan; issues get label `feat:listing-image-uploads`, work lands on branch `feat/listing-image-uploads`)
-Base branch: 02_begin  (`feat/listing-image-uploads` is cut from here; carry this base to every issue)
+Base branch: 04_begin  (`feat/listing-image-uploads` is cut from here at the implementation video, which carries the PRD, plan, and issues; carry this base to every issue)
 
 ## Module interaction
 
