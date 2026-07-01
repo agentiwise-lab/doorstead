@@ -9,7 +9,7 @@ Design the HOW and slice the work into a dependency-ordered set of implementatio
 - `docs/prds/<slug>.md` (a feature PRD), OR
 - `docs/bug-reports/<slug>.md` (a bug fix RCA).
 
-Reuse the same `<slug>` for the plan; it is the feature key. **One PRD = one plan = one branch** (`feat/<slug>`). Given multiple PRDs, produce one plan each in dependency order: never merge PRDs into one plan, never split one PRD. The deliverable boundary is fixed upstream at grill/PRD; the plan only phases units *within* it. `/to-issues` stamps the key on every issue as `feat:<slug>` and `/implement` turns it into the `feat/<slug>` branch; both carry the key, neither decides it.
+Reuse the same `<slug>` for the plan; it is the feature key. **One PRD = one plan = one branch** (`feat/<slug>`). Given multiple PRDs, produce one plan each in dependency order: never merge PRDs into one plan, never split one PRD. The deliverable boundary is fixed upstream at grill/PRD; the plan only phases units *within* it. `/to-issues` stamps the key on every issue as `feat:<slug>` and `/implement` turns it into the `feat/<slug>` branch; both carry the key, neither decides it. The `feat/<slug>` branch is cut from the branch you are planning on now, not assumed to be `main`: record that base in the plan and carry it to every issue, so an unattended run never has to guess where to branch from.
 
 ## Process
 1. Explore the repo: read the glossary, respect existing ADRs, find the modules and seams the work touches. Done when you can name every file the work will modify.
@@ -19,6 +19,7 @@ Reuse the same `<slug>` for the plan; it is the feature key. **One PRD = one pla
 5. Break the work into implementation units, dependency-ordered. Unit 1 is the tracer bullet: the thinnest demoable end-to-end path through every layer. Each later unit adds difficulty. Done when units cover all mapped requirements.
 6. Mark each unit parallel-safe iff it touches different files than its siblings AND depends on no incomplete unit. Done when every unit has a "Blocked by" line.
 7. Gate any destructive change through `/destructive-change-gate` before writing it into the plan. Done when no destructive step is unconfirmed.
+8. Announce the branch plan, then continue without waiting: name `feat/<slug>` and its base (the branch you are on now), as "this feature lands on `feat/<slug>`, branched from `<base>`; stop me if that base is wrong." Non-blocking: say it, do not halt.
 
 ## Output
 Write `docs/plans/<slug>.md`.
@@ -27,6 +28,7 @@ Write `docs/plans/<slug>.md`.
 # Plan: <title>
 Source: docs/prds/<slug>.md (or docs/bug-reports/<slug>.md)
 Feature key: <slug>  (one feature = this plan; issues get label `feat:<slug>`, work lands on branch `feat/<slug>`)
+Base branch: <the branch you are on now; `feat/<slug>` is cut from here, and this base is carried to every issue>
 
 ## Module interaction
 One short paragraph: which modules talk to which, in one direction only.
