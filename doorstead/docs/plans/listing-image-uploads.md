@@ -25,7 +25,7 @@ Admin uploads ONE real image file on the listing edit form → `MediaService` st
   - `lib/media/service.ts` (new): `class DefaultMediaService implements MediaService` — only caller of `lib/db/storage.ts` and the `listing_media` table
   - `lib/listings/actions.ts`: new server action `uploadListingImage(formData: FormData): Promise<void>` (first line `authService.requireAdmin()`)
   - `lib/listings/contract.ts`: extend read model so a listing exposes resolved image links for render, e.g. `getImagesForRender(listingId: string): Promise<RenderImage[]>` where `RenderImage = { url: string; isFloorplan: boolean }` (signed url for stored media; passthrough url for legacy)
-  - migration `supabase/migrations/0003_listing_media.sql`: `listing_media` table (listing_id, original_key, position, is_cover, is_floorplan, timestamps) + private storage bucket + RLS (admin write, no anon direct object read; public reads go through signed links minted server-side)
+  - migration `supabase/migrations/0003_listing_media.sql`: `listing_media` table (listing_id, original_key, position, is_cover, is_floorplan, timestamps) + private storage bucket provisioned in SQL via `insert into storage.buckets` (id `listing-media`, `public=false`) + RLS on `storage.objects` (admin write, no anon direct object read; public reads go through signed links minted server-side). All of it runs under `npx supabase db push`; no bucket is created out of band
   - `PhotoGallery` / `ListingDetail`: accept the resolved `RenderImage[]` (signed urls) instead of raw `photoUrls` for stored media
 - Seams: pure-function + fake seam at the `MediaService` contract (`FakeMediaService`), matching the existing `FakeListingService` pattern in `tests/`; action test drives `uploadListingImage` against the fake. No test reaches Supabase Storage directly.
 - Acceptance: given an admin session, submitting the upload action with one real image byte-payload results in one `listing_media` row and the object present under its key; loading the listing detail page renders an `<img>` whose src is a signed link that resolves to those bytes.
@@ -45,6 +45,7 @@ Admin uploads ONE real image file on the listing edit form → `MediaService` st
 ## Unit 3: Image variants (web-optimised + thumbnail, keep original)
 
 - What it builds: on store, generate a web-optimised copy and a thumbnail alongside the retained original; record all three keys.
+- Runtime budget: variant generation runs synchronously in the upload action; encode each file's web + thumbnail and measure on staging with real images. If a multi-file batch risks the serverless function timeout, move variant generation to an async job (named here as the fallback, out of scope for V1).
 - Modules + contracts:
   - `lib/media/variants.ts` (new): `generateVariants(bytes: Uint8Array, contentType: string): Promise<{ web: Uint8Array; thumb: Uint8Array; webContentType: string; thumbContentType: string }>` (implementation uses an image lib such as `sharp`; kept behind this function)
   - `lib/db/storage.ts`: reused as-is (three `uploadObject` calls)
@@ -79,6 +80,7 @@ Admin uploads ONE real image file on the listing edit form → `MediaService` st
 ## Unit 6: Unified render path for gallery and cards
 
 - What it builds: one server-side resolver that merges stored media (signed web/thumb urls, ordered by cover/position) with legacy `photo_urls` into a single ordered `RenderImage[]`, consumed identically by `ListingCard` (cover = first) and `PhotoGallery`/`ListingDetail` (full gallery).
+- Caching note: signed URLs are minted per request and are unique, so browser and CDN caching does not apply; freshness is intentional and load speed rests on Supabase edge. Acceptable for the admin-focused workload; revisit if public traffic grows.
 - Modules + contracts:
   - `lib/listings/contract.ts`: finalise `getImagesForRender(listingId): Promise<RenderImage[]>` as the single public read for render; `RenderImage = { url: string; thumbUrl: string; isFloorplan: boolean }`
   - `app/page.tsx`, `app/listing/[id]/page.tsx`: resolve images server-side and pass the list down; `ListingCard` takes `coverThumbUrl`, gallery takes the full list — no component imports a service
