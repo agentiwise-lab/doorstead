@@ -19,5 +19,7 @@ An admin uploads one image, Doorstead stores it in a private bucket plus one `li
 - One bad key fails the whole page via `Promise.all` (minor): deferred to Unit 3.
 - Verified clean: admin gate, RLS pattern, real contract tests, no slop.
 
+Fixed 1 and 2 with a `MediaContext` (admin vs public) seam that selects the client per trust context; 66 tests green, typecheck clean.
+
 ## Next
-The series continues with loop engineering architecture (video 5).
+The series continues with loop engineering architecture.
