@@ -1,23 +1,24 @@
-# Creating PRDs and Plans
+# Creating Issues
 
-_Done. You are on `02_end`._
+_Adding image uploads to Doorstead. You are on `03_begin`._
 
-## Produced
-Two files, no code yet:
-- `doorstead/docs/prds/listing-image-uploads.md`: goal, decisions, acceptance, out of scope.
-- `doorstead/docs/plans/listing-image-uploads.md`: tracer-first, dependency-ordered units.
+## Starting point
+The PRD and plan are in `doorstead/docs/`. The plan's units are not yet tracked anywhere a loop or an agent can pick them up.
 
-## Questions and decisions
-Raised while writing the PRD and plan, and how they were answered:
-- Which file types? JPEG, PNG, WebP; others rejected.
-- Max size per file? 10 MB.
-- Max images per listing? 30.
-- Where do the bytes live? Doorstead's own private storage, served via signed, expiring links; no third-party hosts.
-- Keep full quality? Store the original plus a web copy and a thumbnail.
-- Existing pasted-URL listings? Keep rendering, no migration; only the admin URL input is removed (gated, Unit 7).
-- Extend `photo_urls` or add a table? New `listing_media` table; the flat array cannot carry order, cover, floorplan, and variant keys.
+## The job
+Publish each plan unit as one self-contained Linear issue, in dependency order, labelled `feat:listing-image-uploads`. Each issue records the branch it lands on and the base it cuts from.
 
-## Next
+## Run
+```
+/to-issues
+```
+
+## Result
+- Seven Linear issues (the tracer plus six units), each with acceptance criteria, blockers, and a `## Branch` block.
+- A manifest: `doorstead/docs/issues/listing-image-uploads.md`.
+
+## Check
 ```bash
-git checkout 03_begin
+git diff 03_begin..03_end
+git checkout 03_end
 ```
