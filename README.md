@@ -1,6 +1,6 @@
 # AFK Coding on Cloud
 
-_Done. You are on `v8_end`._
+_Done. You are on `08_end`._
 
 ## Built: the loop, running cold
 The loop now runs off your machine. A saved Claude routine executes the orchestrator prompt (`doorstead/docs/prompts/afk-routine.md`) on a schedule, in a fresh cloud container cloned from the repo, connected to Linear and Slack. No laptop, nobody at the keyboard.
@@ -17,10 +17,10 @@ The loop now runs off your machine. A saved Claude routine executes the orchestr
 - You stay the merge gate: review each PR with the `/review-pr` cycle and merge on confirmation.
 
 ## Note on this branch
-The routine's deliverable is reviewable PRs on GitHub, not a change to this trunk, so `v8_end` shares `v8_begin`'s code. The buyer-accounts feature itself is built by the routine, PR by PR, on `feat/buyer-accounts` branches.
+The routine's deliverable is reviewable PRs on GitHub, not a change to this trunk, so `08_end` shares `08_begin`'s code. The buyer-accounts feature itself is built by the routine, PR by PR, on `feat/buyer-accounts` branches.
 
 ## Check
 ```bash
-git diff v8_begin..v8_end
+git diff 08_begin..08_end
 cat doorstead/docs/prompts/afk-routine.md
 ```
