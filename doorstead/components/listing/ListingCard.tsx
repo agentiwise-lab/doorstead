@@ -6,8 +6,13 @@ const formatPrice = (price: number | null): string => {
   return `£${price.toLocaleString('en-GB')}`
 }
 
-export function ListingCard({ listing }: { listing: Listing }) {
-  const firstPhoto = listing.photoUrls[0]
+export function ListingCard({
+  listing,
+  coverThumbUrl,
+}: {
+  listing: Listing
+  coverThumbUrl: string | null
+}) {
   const beds = listing.beds
   const baths = listing.baths
   const area = listing.areaSqft
@@ -19,9 +24,9 @@ export function ListingCard({ listing }: { listing: Listing }) {
     >
       <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-sm transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-lg">
         <div className="relative aspect-[4/3] overflow-hidden bg-brand-50">
-          {firstPhoto ? (
+          {coverThumbUrl ? (
             <img
-              src={firstPhoto}
+              src={coverThumbUrl}
               alt={listing.address ?? 'Property photo'}
               className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
               loading="lazy"

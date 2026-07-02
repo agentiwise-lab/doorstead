@@ -17,10 +17,5 @@ export default async function ListingDetailPage({
 
   const images = await listingService.getImagesForRender(listing.id, 'public')
 
-  return (
-    <ListingDetail
-      listing={listing}
-      imageUrls={images.map((image) => image.url)}
-    />
-  )
+  return <ListingDetail listing={listing} images={images} />
 }
