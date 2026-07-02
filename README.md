@@ -1,25 +1,28 @@
-# Implementing an Issue
+# Implementing Loops
 
-_Done. You are on `04_end`._
+_Automating the issue loop on Doorstead. You are on `06_begin`._
 
-## Built: AGE-114, the tracer
-An admin uploads one image, Doorstead stores it in a private bucket plus one `listing_media` row, and the public listing page renders it via a signed link. Backend built red-green-refactor. `feat/listing-image-uploads` was cut from `04_begin` and merged here.
-- Files: migration `0003_listing_media.sql`, `lib/db/storage.ts`, `lib/media/{contract,service}.ts`, `getImagesForRender` on `ListingService`, the `uploadListingImage` action, the upload form, and the public render.
-- Tests: 60 passed (10 new), typecheck clean. Contract-level `FakeMediaService`; no test touches real Supabase.
+## Starting point
+The tracer (AGE-114) is merged into `04_end`. Five issues remain in the backlog: AGE-115 validation, AGE-116 variants, AGE-117 publish guard, AGE-118 order/cover/floorplan, AGE-119 unified render. AGE-120 (upload UI) is destructive and held.
 
-## Decisions
-- Signed-URL TTL -> 1 hour.
-- `getImagesForRender` owned by `ListingService`, depends on the `MediaService` contract only.
-- Migration written, not applied: the shared dev database is untouched, apply it on deploy.
+## The job
+Cut `feat/listing-image-uploads` from `04_end` and run the implement-then-review loop over the five issues in dependency order, one commit per unit. Each pass implements an issue red-green-refactor, reviews its own diff, fixes findings, then commits before the next. Hold AGE-120.
 
-## Code review
-`/review-code` on the tracer diff. Full review: `doorstead/docs/code-reviews/age-114-tracer.md`. Spec-compliance FAIL, code-quality PASS: the tests were green, the review caught what they could not.
-- Admin edit page 500s on a draft (blocker): `getImagesForRender` signs via anon, anon RLS is live-only -> sign via the server client on admin routes (client keyed off trust context, not operation).
-- Public read mixes clients (minor): `listing_media` read via the server client on the public page -> route it through the anon client.
-- One bad key fails the whole page via `Promise.all` (minor): deferred to Unit 3.
-- Verified clean: admin gate, RLS pattern, real contract tests, no slop.
+## Run
+```
+For each of AGE-115, AGE-116, AGE-117, AGE-118, AGE-119 in order:
+  /implement <issue>     # backend, red-green-refactor
+  /review-code           # review the unit's diff, fix findings
+  commit                 # one commit per unit on feat/listing-image-uploads
+```
 
-Fixed 1 and 2 with a `MediaContext` (admin vs public) seam that selects the client per trust context; 66 tests green, typecheck clean.
+## Result
+- Five units land on `feat/listing-image-uploads`: 66 tests to 102, typecheck and build clean.
+- Two migrations added: `0004` variant columns, `0005` anon read for variant objects.
+- The `feat/listing-image-uploads` PR into `04_end` is what the merge step takes, a separate human-gated decision.
 
-## Next
-The series continues with loop engineering architecture (video 5).
+## Check
+```bash
+git checkout 06_end
+git diff 06_begin..06_end
+```
