@@ -2,8 +2,8 @@
 
 _Done. You are on `07_end`._
 
-## Reviewed and merged: AGE-115 to AGE-119
-The loop's one pull request (`feat/listing-image-uploads`) was reviewed at the PR boundary and squash-merged into the trunk. AGE-120 stays held at the issue level; it was never in the PR.
+## Reviewed and merged: AGE-115 to AGE-120
+The loop's one pull request (`feat/listing-image-uploads`) was reviewed at the PR boundary and squash-merged into the trunk. AGE-120 (the destructive upload UI) was held by the loop for sign-off, then a human approved it; it was implemented as its own reviewed change and merged with the rest.
 
 ## The review found one real defect
 `/review-pr` ran a cross-file panel, correctness, security, and tests/scope, over the whole changeset, the coherence the per-issue reviews never saw:
