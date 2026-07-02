@@ -1,21 +1,32 @@
-# Drafting the Next Feature (Conductor)
+# AFK Coding on Cloud
 
-_Buyer accounts, drafted. You are on `04_02_end_conductor`._
+_Taking the loop off your machine. You are on `v8_begin`._
 
-## What this is
-The END of the parallel buyer-accounts draft, run in a Conductor worktree off `main` while the image-upload tracer was implemented on the main line. The brief became a full, dependency-ordered set of Linear issues, ready for its own run later.
+## Starting point
+The next feature, buyer-accounts, is fully drafted: brief, PRD, plan, plan-review, and a dependency-ordered set of Linear issues (`AGE-121` to `AGE-124`), all produced in the Conductor thread and cut from `main`. It is an independent feature, its own line, so this branch carries only its planning docs, not the image-uploads work. Every loop so far has run locally, with you at the keyboard.
 
-## The brainstorm-to-issues pass
-- `doorstead/docs/briefs/buyer-accounts.md`: the client brief (the input).
-- `doorstead/docs/prds/buyer-accounts.md`: the PRD, `/prd` turning the brief into a spec.
-- `doorstead/docs/plans/buyer-accounts.md`: the plan, `/plan` slicing it into dependency-ordered units, a tracer first.
-- `doorstead/docs/plan-reviews/buyer-accounts.md`: the adversarial `/review-plan` pass, folded back into the plan.
-- `doorstead/docs/issues/buyer-accounts.md`: the Linear issue manifest, `/to-issues` publishing one issue per unit.
+## The job
+Lift the loop off your device. Configure a Claude routine that runs the orchestrator logic cold on a schedule, in a fresh cloud container cloned from the repo, connected to Linear and Slack. It lists the ready buyer-accounts issues, gates the destructive ones for sign-off, dispatches one fresh worker per issue (each worker self-reviews with `/review-code`, then the orchestrator reviews again independently), and raises reviewable PRs unattended. It never touches `main` and never runs a destructive change without a human's sign-off.
 
-## Where it stands
-The issues are live in Linear under `feat:buyer-accounts`, dependency-wired. Implementation is a later run on its own routine; nothing here touches the image-upload work.
+The routine prompt lives in the repo: `doorstead/docs/prompts/afk-routine.md`. It is the loop written out as steps the routine runs cold every time.
+
+## Run
+```
+# In the routine config (cloud):
+#  1. Point it at the repo + the Linear Doorstead project + Slack.
+#  2. Paste doorstead/docs/prompts/afk-routine.md as the routine prompt.
+#  3. Set the schedule and wire the guardrails (no main, no destructive DB, branch-only).
+#  4. Let it run cold.
+```
+
+## Result
+- A saved Claude routine running the loop cold on a schedule, guardrailed.
+- It drains the buyer-accounts backlog (`AGE-121` to `AGE-124`) into reviewable PRs while you are offline, each on a `feat/buyer-accounts` branch cut from this state.
+- State lives in the branch and the issues, so each run resumes cold and is safe to repeat.
 
 ## Check
 ```bash
-git diff 04_02_begin_conductor..04_02_end_conductor
+git checkout v8_end
+git diff v8_begin..v8_end
+cat doorstead/docs/prompts/afk-routine.md
 ```
