@@ -20,6 +20,17 @@ export async function uploadObject(
   if (error) throw error
 }
 
+// Cleanup path: removes an object written during a failed multi-step store, so
+// a partial failure leaves no orphaned bytes in the bucket. Uses the server
+// client for the same reason uploadObject does: the authenticated-admin RLS on
+// storage.objects governs writes.
+export async function removeObject(key: string): Promise<void> {
+  const client = createServerClient()
+  const { error } = await client.storage.from(BUCKET).remove([key])
+
+  if (error) throw error
+}
+
 // Read path: the client is chosen by the caller's trust context, NOT the
 // operation. Public renders sign as anon (the scoped anon SELECT policy proves
 // the object belongs to a live listing, which is exactly what a visitor may

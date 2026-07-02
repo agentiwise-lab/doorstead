@@ -1,6 +1,6 @@
 import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
-import { uploadObject } from '@/lib/db/storage'
+import { removeObject, uploadObject } from '@/lib/db/storage'
 import { generateVariants } from './variants'
 import type {
   MediaContext,
@@ -75,24 +75,40 @@ export class DefaultMediaService implements MediaService {
     const { web, thumb, webContentType, thumbContentType } =
       await generateVariants(file.bytes, file.contentType)
 
-    await uploadObject(key, file.bytes, file.contentType)
-    await uploadObject(webKey, web, webContentType)
-    await uploadObject(thumbKey, thumb, thumbContentType)
+    // Track every object we successfully write so that any failure after the
+    // first upload can best-effort delete them all, leaving no orphaned bytes in
+    // the bucket. The insert is inside the same try: a failed row write must
+    // clean up its three uploaded objects too.
+    const written: string[] = []
+    try {
+      await uploadObject(key, file.bytes, file.contentType)
+      written.push(key)
+      await uploadObject(webKey, web, webContentType)
+      written.push(webKey)
+      await uploadObject(thumbKey, thumb, thumbContentType)
+      written.push(thumbKey)
 
-    const client = createServerClient()
-    const { data, error } = await client
-      .from('listing_media')
-      .insert({
-        listing_id: listingId,
-        original_key: key,
-        web_key: webKey,
-        thumb_key: thumbKey,
-      })
-      .select(MEDIA_COLUMNS)
-      .single()
+      const client = createServerClient()
+      const { data, error } = await client
+        .from('listing_media')
+        .insert({
+          listing_id: listingId,
+          original_key: key,
+          web_key: webKey,
+          thumb_key: thumbKey,
+        })
+        .select(MEDIA_COLUMNS)
+        .single()
 
-    if (error) throw error
-    return toStoredImage(data as MediaRow)
+      if (error) throw error
+      return toStoredImage(data as MediaRow)
+    } catch (err) {
+      // Best-effort cleanup: a remove failure must not mask the original error.
+      await Promise.all(
+        written.map((objectKey) => removeObject(objectKey).catch(() => {})),
+      )
+      throw err
+    }
   }
 
   async listForListing(
