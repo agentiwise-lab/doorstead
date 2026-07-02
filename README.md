@@ -23,7 +23,7 @@ The loop held AGE-120 because it is destructive: it removes the legacy pasted-UR
 - AGE-120 was held by the loop, then signed off and implemented; rollback is `git revert`, not a runtime flag.
 
 ## Code review
-Every unit ran `/review-code` on its own diff before committing; all five passed spec and quality. Reviews live in `doorstead/docs/code-reviews/`. The variant unit's review flagged that anon could not yet read the web and thumb objects; the render unit fixed it with migration `0005`.
+Every unit's worker ran `/review-code` on its own diff before committing, then the orchestrator reviewed it again; all five passed spec and quality. Reviews live in `doorstead/docs/code-reviews/`. The variant unit's review flagged that anon could not yet read the web and thumb objects; the render unit fixed it with migration `0005`. The orchestrator prompt that drove the loop is saved at `doorstead/docs/prompts/loop-orchestrator.md`.
 
 ## Next
 The merge step takes the `feat/listing-image-uploads` PR into `04_end`, a separate human-gated decision.
