@@ -22,4 +22,4 @@ An admin uploads one image, Doorstead stores it in a private bucket plus one `li
 Fixed 1 and 2 with a `MediaContext` (admin vs public) seam that selects the client per trust context; 66 tests green, typecheck clean.
 
 ## Next
-The series continues with loop engineering architecture (video 5).
+The series continues with loop engineering architecture.
