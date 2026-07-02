@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { FakeMediaService } from '../media/fakes'
 import { FakeListingService } from './fakes'
 
 const fakeListingService = new FakeListingService()
+const fakeMediaService = new FakeMediaService()
 let adminOk = true
 
 vi.mock('server-only', () => ({}))
@@ -32,7 +34,7 @@ vi.mock('@/lib/listings/service', () => ({
 }))
 
 vi.mock('@/lib/media/service', () => ({
-  mediaService: {},
+  mediaService: fakeMediaService,
 }))
 
 const {
@@ -88,6 +90,8 @@ beforeEach(() => {
   })
   fakeListingService.getByIdImpl = async () => null
   fakeListingService.deleteImpl = async () => {}
+  fakeMediaService.listForListingCalls = []
+  fakeMediaService.listForListingImpl = async () => []
   adminOk = true
   vi.mocked(revalidatePath).mockClear()
   vi.mocked(redirect).mockClear()
@@ -225,6 +229,49 @@ describe('publishListing', () => {
     expect(vi.mocked(redirect)).toHaveBeenCalledWith(
       `/admin/${ID}/edit?msg=missing-fields&fields=description`,
     )
+  })
+
+  it('refuses with the photo message when there are 0 uploads and 0 legacy urls', async () => {
+    fakeListingService.getByIdImpl = async () => ({
+      ...completeListing(),
+      photoUrls: [],
+    })
+    fakeMediaService.listForListingImpl = async () => []
+
+    await expect(publishListing(makeIdFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeListingService.setStatusCalls.length).toBe(0)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+      `/admin/${ID}/edit?msg=missing-fields&fields=photoUrls`,
+    )
+  })
+
+  it('publishes with an uploaded image and no legacy urls', async () => {
+    fakeListingService.getByIdImpl = async () => ({
+      ...completeListing(),
+      photoUrls: [],
+    })
+    fakeMediaService.listForListingImpl = async () => [
+      {
+        id: 'm1',
+        originalKey: 'k',
+        webKey: 'k.web',
+        thumbKey: 'k.thumb',
+        position: 0,
+        isCover: false,
+        isFloorplan: false,
+      },
+    ]
+
+    await expect(publishListing(makeIdFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeListingService.setStatusCalls).toEqual([
+      { id: ID, status: 'live' },
+    ])
   })
 
   it('on complete listing calls setStatus(id, live) and revalidates both paths', async () => {

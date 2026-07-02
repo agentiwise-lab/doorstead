@@ -102,7 +102,7 @@ function parseListingFormData(formData: FormData): ParseResult {
   if (description) candidate.description = description
 
   if (intent === 'live') {
-    const result = validateForPublish(candidate)
+    const result = validateForPublish(candidate, photoUrls.length)
     if (!result.ok) {
       const fieldErrors: Record<string, string> = {}
       for (const f of result.missingFields) {
@@ -192,7 +192,9 @@ export async function publishListing(formData: FormData): Promise<void> {
   if (current.areaSqft !== null) candidate.areaSqft = current.areaSqft
   if (current.description) candidate.description = current.description
 
-  const result = validateForPublish(candidate)
+  const uploadedCount = (await mediaService.listForListing(id, 'admin')).length
+  const imageCount = uploadedCount + current.photoUrls.length
+  const result = validateForPublish(candidate, imageCount)
   if (!result.ok) {
     const fields = encodeURIComponent(result.missingFields.join(','))
     redirect(`/admin/${id}/edit?msg=missing-fields&fields=${fields}`)
