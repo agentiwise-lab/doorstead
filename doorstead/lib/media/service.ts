@@ -103,11 +103,16 @@ export class DefaultMediaService implements MediaService {
     // listings via listing_media_public_read (migration 0003); admin reads use
     // the server client so drafts resolve. Never mix clients across contexts.
     const client = context === 'admin' ? createServerClient() : anonClient
+    // position, then created_at as a stable tiebreaker: newly uploaded images
+    // all share the default position 0, so without a second key their order (and
+    // thus the cover fallback and gallery order) is arbitrary and flips between
+    // reloads. created_at falls that tie back to upload order.
     const { data, error } = await client
       .from('listing_media')
       .select(MEDIA_COLUMNS)
       .eq('listing_id', listingId)
       .order('position', { ascending: true })
+      .order('created_at', { ascending: true })
 
     if (error) throw error
     return (data ?? []).map((row) => toStoredImage(row as MediaRow))
