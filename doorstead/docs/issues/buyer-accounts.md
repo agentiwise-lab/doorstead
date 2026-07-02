@@ -5,7 +5,7 @@
 - Label: `feat:buyer-accounts`
 - Source plan: `doorstead/docs/plans/buyer-accounts.md`
 
-All 4 issues implement on `feat/buyer-accounts`, cut from `04_02_end`.
+All 4 issues implement on `feat/buyer-accounts`, cut from `04_02_end_conductor`.
 
 | # | ID | Title | Blocked by |
 |---|------|-------|------------|

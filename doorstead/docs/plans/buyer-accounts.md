@@ -2,7 +2,7 @@
 
 Source: docs/prds/buyer-accounts.md
 Feature key: buyer-accounts  (one feature = this plan; issues get label `feat:buyer-accounts`, work lands on branch `feat/buyer-accounts`)
-Base branch: 04_02_end  (`feat/buyer-accounts` is cut from here; this base is carried to every issue. Note: `04_02_end` does not exist yet at planning time — it is created at the end of this planning session and is the base a later unattended `/implement` will branch from. This is intentional forward-looking metadata; stop the run if that base is wrong.)
+Base branch: 04_02_end_conductor  (`feat/buyer-accounts` is cut from here; this base is carried to every issue. Note: `04_02_end_conductor` does not exist yet at planning time — it is created at the end of this planning session and is the base a later unattended `/implement` will branch from. This is intentional forward-looking metadata; stop the run if that base is wrong.)
 
 ## Module interaction
 
