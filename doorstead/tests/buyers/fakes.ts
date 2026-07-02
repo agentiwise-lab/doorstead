@@ -1,5 +1,4 @@
-import type { BuyerService } from '@/lib/buyers/contract'
-import type { Listing } from '@/lib/listings/contract'
+import type { BuyerService, ShortlistEntry } from '@/lib/buyers/contract'
 
 export class FakeBuyerService implements BuyerService {
   saveListingCalls: Array<{ buyerId: string; listingId: string }> = []
@@ -8,7 +7,8 @@ export class FakeBuyerService implements BuyerService {
   unsaveListingCalls: Array<{ buyerId: string; listingId: string }> = []
   unsaveListingImpl: (buyerId: string, listingId: string) => Promise<void> =
     async () => {}
-  listShortlistImpl: (buyerId: string) => Promise<Listing[]> = async () => []
+  listShortlistImpl: (buyerId: string) => Promise<ShortlistEntry[]> =
+    async () => []
   savedListingIdsImpl: (
     buyerId: string,
     listingIds: string[],
@@ -24,7 +24,7 @@ export class FakeBuyerService implements BuyerService {
     return this.unsaveListingImpl(buyerId, listingId)
   }
 
-  async listShortlist(buyerId: string): Promise<Listing[]> {
+  async listShortlist(buyerId: string): Promise<ShortlistEntry[]> {
     return this.listShortlistImpl(buyerId)
   }
 

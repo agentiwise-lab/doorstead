@@ -54,6 +54,9 @@
 -- bypassing this policy without touching any code in this repo. That
 -- guardrail lives in Supabase project settings, not in a migration, and
 -- must be re-verified on every environment this migration is pushed to.
+-- (The committed local supabase/config.toml sets enable_signup = true for
+-- `supabase start` only; both enable_signup lines there carry a NOTE pointing
+-- back to this precondition so nobody copies local settings to a hosted project.)
 --
 -- lower()-normalized on both sides: the anon-write path (inquiries_anon_
 -- insert / DefaultInquiryService.create) stores whatever case a visitor

@@ -42,3 +42,14 @@ The buyer-accounts migrations are numbered `0006` / `0007`, and image-uploads ho
 - `app/shortlist/page.tsx` was updated to resolve covers through the same render path and to offer unsave.
 
 Verified on the merge: `tsc --noEmit` clean, 186 tests across 27 files green, `next build` clean at 12 routes plus middleware.
+
+## Follow-ups resolved on 08_end
+
+All four filed findings were then fixed directly on `08_end`, test-first where applicable:
+
+- `AGE-130`: `/` and `/listing/[id]` no longer alias an `isAdmin` error to "is admin". A shared `resolveHeaderSessionFor` helper falls back to non-admin on error so a signed-in buyer keeps their header. Covered by `tests/auth/public-session.test.ts`.
+- `AGE-128`: `listShortlist` now returns a `ShortlistEntry[]` that keeps unavailable saved rows (null listing), and `/shortlist` renders a "No longer listed" placeholder the buyer can unsave instead of dropping it. Covered by `tests/buyers/service.test.ts`.
+- `AGE-127`: contract-boundary tests added for `DefaultBuyerService` and `DefaultInquiryService` (`tests/buyers/service.test.ts`, `tests/inquiries/service.test.ts`), mocking the DB seam so they run with no env.
+- `AGE-129`: both `enable_signup` lines in `supabase/config.toml` carry a note that hosted email signup must stay off, cross-referenced with the migration 0007 header and the CLAUDE.md deploy step.
+
+Verified after the fixes: `tsc --noEmit` clean, 207 tests across 29 files green.

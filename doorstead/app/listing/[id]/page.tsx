@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { listingService } from '@/lib/listings/service'
 import { authService } from '@/lib/auth/service'
 import { buyerService } from '@/lib/buyers/service'
-import { resolveHeaderSession } from '@/lib/auth/public-session'
+import { resolveHeaderSessionFor } from '@/lib/auth/public-session'
 import { ListingDetail } from '@/components/listing/ListingDetail'
 
 export const dynamic = 'force-dynamic'
@@ -21,9 +21,9 @@ export default async function ListingDetailPage({
   const images = await listingService.getImagesForRender(listing.id, 'public')
 
   const session = await authService.getSession()
-  const isAdmin = session
-    ? await authService.isAdmin(session.userId).catch(() => true)
-    : false
+  const headerSession = await resolveHeaderSessionFor(session, (id) =>
+    authService.isAdmin(id),
+  )
   const isSaved = session
     ? (await buyerService.savedListingIds(session.userId, [listing.id])).has(
         listing.id,
@@ -35,7 +35,7 @@ export default async function ListingDetailPage({
       listing={listing}
       images={images}
       isSaved={isSaved}
-      session={resolveHeaderSession(session, isAdmin)}
+      session={headerSession}
     />
   )
 }

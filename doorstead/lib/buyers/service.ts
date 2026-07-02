@@ -1,6 +1,6 @@
 import { createServerClient } from '@/lib/db/server-client'
 import type { Listing, ListingStatus, ListingType } from '@/lib/listings/contract'
-import type { BuyerService } from './contract'
+import type { BuyerService, ShortlistEntry } from './contract'
 
 type ListingRow = {
   id: string
@@ -18,6 +18,7 @@ type ListingRow = {
 }
 
 type SavedListingRow = {
+  listing_id: string
   created_at: string
   listings: ListingRow | null
 }
@@ -76,20 +77,24 @@ export class DefaultBuyerService implements BuyerService {
     return new Set((data ?? []).map((row) => row.listing_id as string))
   }
 
-  async listShortlist(buyerId: string): Promise<Listing[]> {
+  async listShortlist(buyerId: string): Promise<ShortlistEntry[]> {
     const client = createServerClient()
     const { data, error } = await client
       .from('saved_listings')
       .select(
-        'created_at, listings(id, address, type, price_gbp, beds, baths, area_sqft, status, description, photo_urls, created_at, updated_at, deleted_at)',
+        'listing_id, created_at, listings(id, address, type, price_gbp, beds, baths, area_sqft, status, description, photo_urls, created_at, updated_at, deleted_at)',
       )
       .eq('buyer_id', buyerId)
       .order('created_at', { ascending: false })
 
     if (error) throw error
-    return (data as unknown as SavedListingRow[] ?? [])
-      .filter((row) => row.listings !== null)
-      .map((row) => toListing(row.listings as ListingRow))
+    // Keep rows whose joined listing is null (unavailable to this buyer) so the
+    // shortlist can surface them as "no longer listed" instead of dropping them.
+    return (data as unknown as SavedListingRow[] ?? []).map((row) => ({
+      listingId: row.listing_id,
+      savedAt: row.created_at,
+      listing: row.listings ? toListing(row.listings) : null,
+    }))
   }
 }
 

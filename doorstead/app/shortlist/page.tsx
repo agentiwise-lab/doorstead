@@ -18,16 +18,19 @@ export default async function ShortlistPage() {
     redirect('/sign-in?next=%2Fshortlist')
   }
 
-  const listings = await buyerService.listShortlist(session.userId)
+  const entries = await buyerService.listShortlist(session.userId)
 
-  // Resolve each saved card's cover through the same render path the home grid
-  // and gallery use, so a stored-only or legacy-only listing shows a cover.
+  // Resolve a cover only for entries whose listing is still available. An
+  // unavailable entry (unpublished or deleted) renders as a placeholder the
+  // buyer can unsave, rather than being silently dropped from the shortlist.
   const cards = await Promise.all(
-    listings.map(async (listing) => ({
-      listing,
-      coverThumbUrl: coverThumbUrl(
-        await listingService.getImagesForRender(listing.id, 'public'),
-      ),
+    entries.map(async (entry) => ({
+      entry,
+      coverThumbUrl: entry.listing
+        ? coverThumbUrl(
+            await listingService.getImagesForRender(entry.listing.id, 'public'),
+          )
+        : null,
     })),
   )
 
@@ -36,7 +39,7 @@ export default async function ShortlistPage() {
       <PublicHeader contextLabel="Your shortlist" session={session} />
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-        {listings.length === 0 ? (
+        {entries.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-brand-200 bg-white px-6 py-16 text-center">
             <h2 className="font-display text-xl font-semibold text-brand-900">
               Nothing saved yet
@@ -47,21 +50,41 @@ export default async function ShortlistPage() {
           </div>
         ) : (
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {cards.map(({ listing, coverThumbUrl }) => (
-              <li key={listing.id}>
-                <ListingCard
-                  listing={listing}
-                  coverThumbUrl={coverThumbUrl}
-                  saveControl={
-                    <SaveListingButton
-                      listingId={listing.id}
-                      isSaved
-                      redirectTo="/shortlist"
-                    />
-                  }
-                />
-              </li>
-            ))}
+            {cards.map(({ entry, coverThumbUrl }) =>
+              entry.listing ? (
+                <li key={entry.listingId}>
+                  <ListingCard
+                    listing={entry.listing}
+                    coverThumbUrl={coverThumbUrl}
+                    saveControl={
+                      <SaveListingButton
+                        listingId={entry.listing.id}
+                        isSaved
+                        redirectTo="/shortlist"
+                      />
+                    }
+                  />
+                </li>
+              ) : (
+                <li key={entry.listingId}>
+                  <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-brand-200 bg-white p-6 text-center">
+                    <p className="font-display text-lg font-semibold text-brand-900">
+                      No longer listed
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600">
+                      This saved property has been removed or unpublished.
+                    </p>
+                    <div className="mt-4">
+                      <SaveListingButton
+                        listingId={entry.listingId}
+                        isSaved
+                        redirectTo="/shortlist"
+                      />
+                    </div>
+                  </div>
+                </li>
+              ),
+            )}
           </ul>
         )}
       </main>

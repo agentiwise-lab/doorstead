@@ -173,6 +173,12 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
+# NOTE (Doorstead): this is LOCAL dev config only. In the HOSTED project, email
+# self-signup MUST stay OFF. Migration 0007 (inquiries_buyer_read) scopes a
+# buyer's inquiries to their verified `auth.jwt() ->> 'email'`; if anyone could
+# self-serve an account for an arbitrary email, that guarantee breaks. Google is
+# the only intended provider. See the deploy runbook in CLAUDE.md ("Disable
+# email signup").
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
@@ -218,6 +224,8 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
+# NOTE (Doorstead): keep this OFF in the hosted project (see migration 0007 and
+# the CLAUDE.md deploy runbook). Local-only here for `supabase start`.
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.

@@ -2,7 +2,7 @@ import { listingService } from '@/lib/listings/service'
 import { coverThumbUrl } from '@/lib/listings/render'
 import { authService } from '@/lib/auth/service'
 import { buyerService } from '@/lib/buyers/service'
-import { resolveHeaderSession } from '@/lib/auth/public-session'
+import { resolveHeaderSessionFor } from '@/lib/auth/public-session'
 import { ListingCard } from '@/components/listing/ListingCard'
 import { SaveListingButton } from '@/components/listing/SaveListingButton'
 import { PublicHeader } from '@/components/ui/PublicHeader'
@@ -13,9 +13,9 @@ export default async function HomePage() {
   const listings = await listingService.listLive()
 
   const session = await authService.getSession()
-  const isAdmin = session
-    ? await authService.isAdmin(session.userId).catch(() => true)
-    : false
+  const headerSession = await resolveHeaderSessionFor(session, (id) =>
+    authService.isAdmin(id),
+  )
   const savedIds = session
     ? await buyerService.savedListingIds(
         session.userId,
@@ -36,7 +36,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <PublicHeader session={resolveHeaderSession(session, isAdmin)} />
+      <PublicHeader session={headerSession} />
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         {listings.length === 0 ? (
