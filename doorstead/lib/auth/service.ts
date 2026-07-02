@@ -60,7 +60,12 @@ export class DefaultAuthService implements AuthService {
   async requireBuyer(): Promise<Session> {
     const session = await this.getSession()
     if (!session) throw new Error('Unauthorized')
-    const admin = await this.isAdmin(session.userId).catch(() => true)
+    // Fail closed on error, but do not conflate "the admin check errored" with
+    // "this user is an admin": reject explicitly rather than returning a session
+    // derived from a check that never completed.
+    const admin = await this.isAdmin(session.userId).catch(() => {
+      throw new Error('Unauthorized')
+    })
     if (admin) throw new Error('Unauthorized')
     return session
   }

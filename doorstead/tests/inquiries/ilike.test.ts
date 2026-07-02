@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-vi.mock('server-only', () => ({}))
-
-const { escapeForIlike } = await import('@/lib/inquiries/service')
+// Imports the pure ilike module directly, not lib/inquiries/service, so this
+// suite runs on a fresh clone with no Supabase env vars set: it never loads
+// anon-client (which throws at import when the env is absent).
+import { escapeForIlike } from '@/lib/inquiries/ilike'
 
 describe('escapeForIlike', () => {
   it('escapes a percent sign so it is matched literally, not as a wildcard', () => {

@@ -1,5 +1,6 @@
 import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
+import { escapeForIlike } from './ilike'
 import type {
   InquiryInput,
   InquiryService,
@@ -15,16 +16,6 @@ type InquiryRow = {
   created_at: string
   listings: { address: string | null } | null
 }
-
-// PostgREST's .ilike() compiles to SQL LIKE, where % and _ are wildcards.
-// An email's local part may legally contain either, so they must be escaped
-// or a query for "a_b@x.com" could also match an unrelated "aXb@x.com" —
-// harmless here only because inquiries_buyer_read (migration 0007) still
-// independently re-checks lower(email) = lower(jwt email) as an exact
-// match, but escaping keeps this filter's own intent correct rather than
-// leaning on that second layer to paper over it.
-export const escapeForIlike = (value: string): string =>
-  value.replace(/[\\%_]/g, (char) => `\\${char}`)
 
 const toInquiryWithListing = (row: InquiryRow): InquiryWithListing => ({
   id: row.id,
