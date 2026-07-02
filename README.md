@@ -17,7 +17,17 @@ The loop now runs off your machine. A saved Claude routine executes the orchestr
 - The record of the review and the fixes is `doorstead/docs/ship/buyer-accounts.md`.
 
 ## This branch is the combined end state
-`08_end` carries both features merged: image uploads (`AGE-114` to `AGE-120`) and buyer accounts (`AGE-121` to `AGE-124`). Both reworked the listing UI, so the merge integrated them by hand: a listing card and detail now show uploaded images and a save control together, and the migrations line up contiguously (`0001` to `0007`). Verified on the merge: `tsc --noEmit` clean, 186 tests across 27 files green, `next build` clean at 12 routes plus middleware.
+`08_end` carries both features merged: image uploads (`AGE-114` to `AGE-120`) and buyer accounts (`AGE-121` to `AGE-124`). Both reworked the listing UI, so the merge integrated them by hand: a listing card and detail now show uploaded images and a save control together, and the migrations line up contiguously (`0001` to `0007`). Verified: `tsc --noEmit` clean, 207 tests across 29 files green, `next build` clean at 12 routes plus middleware.
+
+## Run it yourself
+Two setup steps are easy to miss when exercising both features against a fresh Supabase project:
+
+- **Apply every migration, up to `0007`.** The combined branch reads `saved_listings` on the home page, so a database still at `0005` throws a server error on `/`. Migration `0006` creates `saved_listings` plus the buyer RLS policies, and `0007` adds the buyer inquiry-read policy. Apply the full `doorstead/supabase/migrations/` set before loading the app.
+- **Enable the Google auth provider**, or buyer sign-in fails with `provider is not enabled`. Create a Google Cloud OAuth web client, add `https://<project-ref>.supabase.co/auth/v1/callback` as its redirect URI, paste the client id and secret into Supabase Authentication > Providers > Google, and add `http://localhost:3000/auth/callback` to the redirect allowlist. Keep email self-signup OFF (see the deploy runbook in `CLAUDE.md` and the header of migration `0007`).
+
+The two sign-in paths differ by design:
+- **Admin** signs in with email and password (the seeded admin in `doorstead/supabase/seed.sql`). A listing needs at least one photo before it can be published: the publish guard blocks a live listing with no media.
+- **Buyers** sign in with Google only. An inquiry sent from a listing page before signing in shows up under **My inquiries** once the buyer signs in with the same email.
 
 ## Check
 ```bash
