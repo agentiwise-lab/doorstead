@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export default function SignInPage({
   searchParams,
 }: {
-  searchParams: { next?: string }
+  searchParams: { next?: string | string[] }
 }) {
   const next = sanitizeNextPath(searchParams.next)
 

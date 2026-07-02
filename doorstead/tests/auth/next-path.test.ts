@@ -49,4 +49,16 @@ describe('sanitizeNextPath', () => {
   it('falls back to /shortlist for a carriage-return bypass', () => {
     expect(sanitizeNextPath('/\r/evil.com')).toBe('/shortlist')
   })
+
+  it('uses the first value when the App Router delivers a repeated query key as string[]', () => {
+    expect(sanitizeNextPath(['/admin', '/other'])).toBe('/admin')
+  })
+
+  it('falls back to /shortlist for an empty array', () => {
+    expect(sanitizeNextPath([])).toBe('/shortlist')
+  })
+
+  it('falls back to /shortlist when the first array value is unsafe', () => {
+    expect(sanitizeNextPath(['http://evil.com', '/admin'])).toBe('/shortlist')
+  })
 })
