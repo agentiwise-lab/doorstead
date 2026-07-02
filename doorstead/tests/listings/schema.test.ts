@@ -56,9 +56,9 @@ describe('ListingLiveSchema', () => {
     expect(r.success).toBe(false)
   })
 
-  it('rejects empty photoUrls', () => {
+  it('accepts empty photoUrls (photo requirement is enforced by validateForPublish)', () => {
     const r = ListingLiveSchema.safeParse({ ...validLiveInput, photoUrls: [] })
-    expect(r.success).toBe(false)
+    expect(r.success).toBe(true)
   })
 
   it('rejects unknown type', () => {
@@ -76,23 +76,35 @@ describe('ListingLiveSchema', () => {
 })
 
 describe('validateForPublish', () => {
+  const noPhotoInput = { ...validLiveInput, photoUrls: [] }
+
   it('returns {ok:false, missingFields:["description"]} when description missing', () => {
     const { description: _omit, ...rest } = validLiveInput
-    const r = validateForPublish(rest)
+    const r = validateForPublish(rest, 1)
     expect(r).toEqual({ ok: false, missingFields: ['description'] })
   })
 
-  it('returns {ok:false, missingFields:["photoUrls"]} when photoUrls empty', () => {
-    const r = validateForPublish({ ...validLiveInput, photoUrls: [] })
+  it('blocks on photoUrls when there are 0 uploads and 0 legacy urls', () => {
+    const r = validateForPublish(noPhotoInput, 0)
     expect(r).toEqual({ ok: false, missingFields: ['photoUrls'] })
   })
 
-  it('returns {ok:true, value} when complete', () => {
-    const r = validateForPublish(validLiveInput)
+  it('passes with an uploaded image and no legacy urls', () => {
+    const r = validateForPublish(noPhotoInput, 1)
+    expect(r.ok).toBe(true)
+  })
+
+  it('passes with a legacy url and no uploaded images', () => {
+    const r = validateForPublish(validLiveInput, 1)
     expect(r.ok).toBe(true)
     if (r.ok) {
       expect(r.value.address).toBe('12 Baker Street, London')
       expect(r.value.photoUrls).toEqual(['https://example.com/x.jpg'])
     }
+  })
+
+  it('passes with both an uploaded image and a legacy url', () => {
+    const r = validateForPublish(validLiveInput, 2)
+    expect(r.ok).toBe(true)
   })
 })

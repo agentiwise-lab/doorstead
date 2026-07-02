@@ -59,9 +59,7 @@ export const ListingLiveSchema = z.object({
   baths: requiredNonNegInt,
   areaSqft: requiredNonNegInt,
   description: requiredNonEmptyString,
-  photoUrls: z
-    .array(photoUrlSchema)
-    .min(1, 'at least one photo URL is required'),
+  photoUrls: z.array(photoUrlSchema).optional().default([]),
 })
 
 export type ListingDraftInput = z.infer<typeof ListingDraftSchema>
@@ -71,19 +69,30 @@ export type ValidateForPublishResult =
   | { ok: true; value: ListingInput }
   | { ok: false; missingFields: string[] }
 
-export function validateForPublish(input: unknown): ValidateForPublishResult {
+// imageCount is the effective photo count for the listing: uploaded media plus
+// legacy photo URLs. A listing may publish with a photo from either source, so
+// the photo requirement is enforced here rather than as photoUrls.min(1).
+export function validateForPublish(
+  input: unknown,
+  imageCount: number,
+): ValidateForPublishResult {
   const parsed = ListingLiveSchema.safeParse(input)
-  if (parsed.success) {
-    return { ok: true, value: parsed.data satisfies ListingInput }
-  }
   const seen = new Set<string>()
   const missingFields: string[] = []
-  for (const issue of parsed.error.issues) {
-    const top = issue.path[0]
-    if (typeof top === 'string' && !seen.has(top)) {
-      seen.add(top)
-      missingFields.push(top)
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      const top = issue.path[0]
+      if (typeof top === 'string' && !seen.has(top)) {
+        seen.add(top)
+        missingFields.push(top)
+      }
     }
   }
-  return { ok: false, missingFields }
+  if (imageCount < 1 && !seen.has('photoUrls')) {
+    missingFields.push('photoUrls')
+  }
+  if (!parsed.success || missingFields.length > 0) {
+    return { ok: false, missingFields }
+  }
+  return { ok: true, value: parsed.data satisfies ListingInput }
 }
