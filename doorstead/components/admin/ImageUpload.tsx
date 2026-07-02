@@ -1,5 +1,13 @@
 import { uploadListingImage } from '@/lib/listings/actions'
 
+// The tracer form needs a void-returning action; uploadListingImage returns a
+// typed rejection state (Unit 2). Surfacing that message in the UI is Unit 7's
+// uploader; here the tracer just triggers the server-side enforcement.
+async function uploadImageAction(formData: FormData): Promise<void> {
+  'use server'
+  await uploadListingImage(formData)
+}
+
 // Tracer uploader: one file, its own <form> posting straight to the server
 // action. It lives outside ListingForm because a file upload needs a distinct
 // form submission from the listing-details save. Reorder/cover/remove and the
@@ -28,7 +36,7 @@ export function ImageUpload({
         </div>
       )}
 
-      <form action={uploadListingImage} className="mt-4 flex items-center gap-3">
+      <form action={uploadImageAction} className="mt-4 flex items-center gap-3">
         <input type="hidden" name="id" value={listingId} />
         <input
           type="file"

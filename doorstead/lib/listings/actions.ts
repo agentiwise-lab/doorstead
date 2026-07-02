@@ -5,6 +5,10 @@ import { redirect } from 'next/navigation'
 import { authService } from '@/lib/auth/service'
 import { listingService } from '@/lib/listings/service'
 import { mediaService } from '@/lib/media/service'
+import {
+  type UploadRejectionReason,
+  validateUpload,
+} from '@/lib/media/validation'
 import type { ListingInput, ListingStatus } from './contract'
 import { parsePhotoUrls } from './photo-urls'
 import { ListingDraftSchema, validateForPublish } from './schema'
@@ -15,6 +19,12 @@ export type CreateListingState = {
 
 export type UpdateListingState = {
   fieldErrors?: Record<string, string>
+}
+
+// A rejected upload returns this state so the caller can surface the message.
+// A successful upload redirects and never returns.
+export type UploadImageState = {
+  error?: { reason: UploadRejectionReason; message: string }
 }
 
 function readString(formData: FormData, name: string): string {
@@ -217,7 +227,9 @@ export async function unpublishListing(formData: FormData): Promise<void> {
   redirect('/admin')
 }
 
-export async function uploadListingImage(formData: FormData): Promise<void> {
+export async function uploadListingImage(
+  formData: FormData,
+): Promise<UploadImageState> {
   await authService.requireAdmin()
 
   const idRaw = formData.get('id')
@@ -229,6 +241,15 @@ export async function uploadListingImage(formData: FormData): Promise<void> {
   const image = formData.get('image')
   if (!(image instanceof File) || image.size === 0) {
     redirect(`/admin/${id}/edit`)
+  }
+
+  const currentCount = (await mediaService.listForListing(id, 'admin')).length
+  const validation = validateUpload(
+    { contentType: image.type, byteLength: image.size },
+    currentCount,
+  )
+  if (!validation.ok) {
+    return { error: { reason: validation.reason, message: validation.message } }
   }
 
   const bytes = new Uint8Array(await image.arrayBuffer())

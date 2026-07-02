@@ -53,8 +53,15 @@ function imageFile(): File {
   })
 }
 
+function gifFile(): File {
+  return new File([new Uint8Array([1, 2, 3, 4])], 'photo.gif', {
+    type: 'image/gif',
+  })
+}
+
 beforeEach(() => {
   fakeMediaService.storeImageCalls = []
+  fakeMediaService.listForListingImpl = async () => []
   adminOk = true
   vi.mocked(revalidatePath).mockClear()
 })
@@ -89,5 +96,30 @@ describe('uploadListingImage', () => {
       uploadListingImage(makeFormData(LISTING_ID)),
     ).rejects.toThrow(/NEXT_REDIRECT/)
     expect(fakeMediaService.storeImageCalls.length).toBe(0)
+  })
+
+  it('refuses a disallowed type: leaves the listing unchanged and returns the message', async () => {
+    const state = await uploadListingImage(makeFormData(LISTING_ID, gifFile()))
+
+    expect(fakeMediaService.storeImageCalls.length).toBe(0)
+    expect(state?.error?.reason).toBe('type')
+    expect(state?.error?.message).toContain('JPEG')
+  })
+
+  it('refuses the 31st image: leaves the listing unchanged and names the 30 limit', async () => {
+    fakeMediaService.listForListingImpl = async () =>
+      Array.from({ length: 30 }, (_, i) => ({
+        id: `${i}`,
+        originalKey: `k${i}`,
+        position: i,
+        isCover: false,
+        isFloorplan: false,
+      }))
+
+    const state = await uploadListingImage(makeFormData(LISTING_ID, imageFile()))
+
+    expect(fakeMediaService.storeImageCalls.length).toBe(0)
+    expect(state?.error?.reason).toBe('count')
+    expect(state?.error?.message).toContain('30')
   })
 })
