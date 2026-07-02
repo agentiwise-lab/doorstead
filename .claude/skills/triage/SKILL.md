@@ -21,7 +21,7 @@ Intake front door: classify an incoming request, verify the claim, route it.
 ## Hard rules
 
 - Every comment the agent posts during triage starts with a one-line disclaimer that it was AI-generated. Why: a reader with no human in the loop must know the source before trusting the content.
-- Apply the `/destructive-change-gate`. If acting would mean a destructive change, comment the plan and the open questions on the issue and stop for sign-off. Why: silent destructive action on an async tracker has no human to catch it before damage lands.
+- Apply the `/destructive-change-gate`. If acting would mean a destructive change, comment the plan and the open questions on the issue and stop for sign-off, unless the issue already carries `destructive:signed-off` (the recorded human decision), in which case proceed. Why: silent destructive action on an async tracker has no human to catch it before damage lands; the label is how that human decision rides on the issue.
 - Cap clarification rounds. Why: a confused thread that loops never converges and burns the reporter's patience; a bounded count forces a route-or-reject decision.
 - Do not re-ask questions already answered in prior triage notes. Why: re-asking signals the agent did not read the thread and erodes trust in the intake.
 
