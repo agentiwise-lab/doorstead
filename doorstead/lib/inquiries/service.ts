@@ -1,5 +1,6 @@
 import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
+import { escapeForIlike } from './ilike'
 import type {
   InquiryInput,
   InquiryService,
@@ -47,6 +48,30 @@ export class DefaultInquiryService implements InquiryService {
       .select(
         'id, listing_id, name, email, phone, created_at, listings!inquiries_listing_id_fkey(address)',
       )
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return (data ?? []).map((row) =>
+      toInquiryWithListing(row as unknown as InquiryRow),
+    )
+  }
+
+  async listForBuyer(email: string): Promise<InquiryWithListing[]> {
+    const client = createServerClient()
+    // The real security boundary is the inquiries_buyer_read RLS policy
+    // (migration 0007), which independently gates on
+    // lower(email) = lower(auth.jwt() ->> 'email'). The .ilike() below only
+    // shapes the query to the caller's own rows for clarity — removing it
+    // could not widen what a buyer can read, since RLS enforces that
+    // regardless. It matches RLS's case-insensitivity (not .eq(), which
+    // would silently drop a buyer's own pre-signup inquiry if they typed
+    // their email in different casing than their verified account email).
+    const { data, error } = await client
+      .from('inquiries')
+      .select(
+        'id, listing_id, name, email, phone, created_at, listings!inquiries_listing_id_fkey(address)',
+      )
+      .ilike('email', escapeForIlike(email))
       .order('created_at', { ascending: false })
 
     if (error) throw error

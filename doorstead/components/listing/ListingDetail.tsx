@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import type { Listing, RenderImage } from '@/lib/listings/contract'
+import type { Session } from '@/lib/auth/contract'
 import { PhotoGallery } from './PhotoGallery'
 import { InquiryForm } from './InquiryForm'
+import { SaveListingButton } from './SaveListingButton'
 import { PublicHeader } from '@/components/ui/PublicHeader'
 
 function BackButton() {
@@ -41,9 +43,13 @@ function Fact({ label, value }: { label: string; value: string }) {
 export function ListingDetail({
   listing,
   images,
+  isSaved,
+  session,
 }: {
   listing: Listing
   images: RenderImage[]
+  isSaved: boolean
+  session: Session | null
 }) {
   const address = listing.address ?? 'Address available on request'
   const area = formatArea(listing.areaSqft)
@@ -63,6 +69,7 @@ export function ListingDetail({
         contextLabelAs="h1"
         action={<BackButton />}
         maxWidth="4xl"
+        session={session}
       />
 
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
@@ -79,12 +86,21 @@ export function ListingDetail({
         </section>
 
         <section className="mb-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-            Guide price
-          </p>
-          <p className="mt-1 font-display text-3xl font-semibold tracking-tight text-brand-900 sm:text-4xl">
-            {formatPrice(listing.priceGbp)}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+                Guide price
+              </p>
+              <p className="mt-1 font-display text-3xl font-semibold tracking-tight text-brand-900 sm:text-4xl">
+                {formatPrice(listing.priceGbp)}
+              </p>
+            </div>
+            <SaveListingButton
+              listingId={listing.id}
+              isSaved={isSaved}
+              redirectTo={`/listing/${listing.id}`}
+            />
+          </div>
           {facts.length > 0 && (
             <dl className="mt-6 grid grid-cols-2 gap-5 border-t border-brand-100 pt-6 sm:grid-cols-4">
               {facts.map((fact) => (

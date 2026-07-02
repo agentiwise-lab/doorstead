@@ -1,12 +1,27 @@
 import { listingService } from '@/lib/listings/service'
 import { coverThumbUrl } from '@/lib/listings/render'
+import { authService } from '@/lib/auth/service'
+import { buyerService } from '@/lib/buyers/service'
+import { resolveHeaderSession } from '@/lib/auth/public-session'
 import { ListingCard } from '@/components/listing/ListingCard'
+import { SaveListingButton } from '@/components/listing/SaveListingButton'
 import { PublicHeader } from '@/components/ui/PublicHeader'
 
 export const dynamic = "force-dynamic"
 
 export default async function HomePage() {
   const listings = await listingService.listLive()
+
+  const session = await authService.getSession()
+  const isAdmin = session
+    ? await authService.isAdmin(session.userId).catch(() => true)
+    : false
+  const savedIds = session
+    ? await buyerService.savedListingIds(
+        session.userId,
+        listings.map((listing) => listing.id),
+      )
+    : new Set<string>()
 
   // Resolve each card's cover through the same render path the gallery uses, so
   // stored-only, legacy-only, and mixed listings show a cover identically.
@@ -21,7 +36,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <PublicHeader />
+      <PublicHeader session={resolveHeaderSession(session, isAdmin)} />
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         {listings.length === 0 ? (
@@ -55,7 +70,17 @@ export default async function HomePage() {
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {cards.map(({ listing, coverThumbUrl }) => (
               <li key={listing.id}>
-                <ListingCard listing={listing} coverThumbUrl={coverThumbUrl} />
+                <ListingCard
+                  listing={listing}
+                  coverThumbUrl={coverThumbUrl}
+                  saveControl={
+                    <SaveListingButton
+                      listingId={listing.id}
+                      isSaved={savedIds.has(listing.id)}
+                      redirectTo="/"
+                    />
+                  }
+                />
               </li>
             ))}
           </ul>

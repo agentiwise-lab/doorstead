@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { authService } from './service'
+import { sanitizeNextPath } from './next-path'
 
 export type LoginActionResult = { error: 'invalid_credentials' } | undefined
 
@@ -27,4 +28,15 @@ export async function login(
 export async function logout(): Promise<void> {
   await authService.signOut()
   redirect('/admin/login')
+}
+
+export async function buyerLogout(): Promise<void> {
+  await authService.signOut()
+  redirect('/')
+}
+
+export async function signInWithGoogle(formData: FormData): Promise<void> {
+  const next = sanitizeNextPath(String(formData.get('next') ?? ''))
+  const url = await authService.getGoogleSignInUrl(next)
+  redirect(url)
 }

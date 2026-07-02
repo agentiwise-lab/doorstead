@@ -65,7 +65,8 @@ Do these once, in order, before the first push.
 
 3. **Apply the schema migration**: `npx supabase db push`. Verify in the Table Editor that `admins` and `listings` exist and that RLS is enabled on both.
 4. **Disable email signup** (CRITICAL — without this, anyone can sign themselves up and the RLS gate becomes useless): Supabase dashboard → Authentication → Providers → Email → uncheck **"Allow new users to sign up."** Save.
-5. **Provision the production admin** (one-time, local-only — the service role key is never committed and never set in Vercel):
+5. **Enable Google sign-in for buyers** (Supabase dashboard → Authentication → Providers → Google): paste the Google Cloud OAuth client id + secret (no secret is committed, and there is no `.env.example` change — these live only in Supabase project config). Register the app's callback URL (`https://<prod-domain>/auth/callback`, plus `http://localhost:3000/auth/callback` for local dev) in Supabase's redirect allowlist, and add Supabase's own `.../auth/v1/callback` URL in the Google Cloud console. Keep email self-signup OFF (step 4) — enabling Google does not require re-enabling it. Confirm a Google sign-up cannot mint an admin: the `admins` table has no INSERT/UPDATE/DELETE policy for any role (see `0001_listings.sql`), so it can only ever be populated by the one-time local service-role step below, never by a self-service request.
+6. **Provision the production admin** (one-time, local-only — the service role key is never committed and never set in Vercel):
 
    ```bash
    export SUPABASE_SERVICE_ROLE_KEY=...   # from Supabase dashboard, project settings → API
@@ -73,9 +74,9 @@ Do these once, in order, before the first push.
    ```
 
    Capture the returned user UUID, then in the SQL editor: `insert into admins (user_id) values ('<uuid>');`. Unset the env var when done.
-6. **Set Vercel env vars**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. **Do NOT** set `SUPABASE_SERVICE_ROLE_KEY` in Vercel.
-7. **Push to main**. Vercel auto-deploys.
-8. **Smoke check** on the deployed URL: `/` returns 200 with the empty-state; email signup returns `signup_disabled`; the `moddatetime` trigger keeps `updated_at` fresh on `update listings set address = address`.
+7. **Set Vercel env vars**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. **Do NOT** set `SUPABASE_SERVICE_ROLE_KEY` in Vercel.
+8. **Push to main**. Vercel auto-deploys.
+9. **Smoke check** on the deployed URL: `/` returns 200 with the empty-state; email signup returns `signup_disabled`; the `moddatetime` trigger keeps `updated_at` fresh on `update listings set address = address`; one live Google sign-in → save one live listing → see it on `/shortlist`.
 
 ## App conventions (`doorstead/`)
 
@@ -90,17 +91,17 @@ service impl (lib/*/service.ts)  →  lib/db/*
 lib/db/*  →  @supabase/supabase-js
 ```
 
-- Routes (server components, server actions) import only `ListingService` and `AuthService` contract types and their typed singletons. Never `@supabase/*`.
+- Routes (server components, server actions) import only `ListingService`, `AuthService`, and `BuyerService` contract types and their typed singletons. Never `@supabase/*`.
 - `Default*Service` implementations are the only callers of `lib/db/`.
 - `lib/db/` is the only folder that imports `@supabase/supabase-js`.
-- UI components in `components/**` never import services or the DB. They receive data and callbacks as props.
+- UI components in `components/**` never import services or the DB. They receive data and callbacks as props, or import a server action from `lib/*/actions.ts` directly to wire a form (see `components/admin/LogoutButton.tsx`, `components/listing/SaveListingButton.tsx`) — that's the one established exception, since an action is still the contract boundary, not the DB.
 
 ### Two Supabase clients
 
 - `lib/db/anon-client.ts` — cookie-free, used by public reads. RLS sees the anon role.
-- `lib/db/server-client.ts` — cookie-aware, used by admin reads and writes. RLS sees the authenticated user via membership in the `admins` table.
+- `lib/db/server-client.ts` — cookie-aware, used by admin AND buyer reads/writes. RLS sees the authenticated user via membership in the `admins` table (admin paths) or via `auth.uid()` row ownership (buyer paths, e.g. `saved_listings`).
 
-Public routes use anon. Admin routes use server-client. Never mix.
+Public routes use anon. Admin and buyer routes use server-client. Never mix.
 
 ### Public route caching
 
@@ -115,6 +116,10 @@ Public routes (`/`, `/listing/[id]`) set `export const dynamic = 'force-dynamic'
 
 Every admin server action calls `authService.requireAdmin()` as its first line. Next.js middleware does NOT execute for server actions invoked from non-admin paths, so each action is its own gate. `requireAdmin()` checks both the Supabase session AND membership in the `admins` table.
 
+### Buyer auth gate
+
+Every buyer server action and buyer page calls `authService.requireBuyer()` as its first line (actions) or first statement wrapped in try/catch → `redirect('/sign-in')` (pages, e.g. `app/shortlist/page.tsx`, mirroring `app/admin/(authed)/layout.tsx`'s pattern). `requireBuyer()` returns the session only for a signed-in user who is confirmed NOT an admin — it fails closed: if the admins-table membership check itself errors (not just "confirmed not admin"), the request is rejected, never treated as a valid buyer. `isAdmin()` throws on a query error rather than swallowing it to `false`, so any direct caller of `isAdmin()` (not just `requireAdmin`/`requireBuyer`) must decide its own fail-open/fail-closed behavior explicitly — see `app/admin/login/page.tsx`, which wraps it in `.catch(() => false)` to preserve its own "fall through to the login form" behavior on a transient error.
+
 ### Tests
 
 - `tests/` at the app root.
@@ -127,6 +132,7 @@ Every admin server action calls `authService.requireAdmin()` as its first line. 
 
 - Live in `supabase/migrations/`, numbered `0001_*`, `0002_*`, …
 - Run via `npx supabase db push`. Never via the SQL editor — that breaks the migration lineage.
+- Guarantees an RLS policy makes (cross-user isolation, idempotent-insert-once semantics) cannot be proven by a `Fake*Service` — those are proven against a real local stack (`npx supabase start`, `npx supabase db reset`), not vitest. `supabase/verify-local-rls.mjs` is a reproducible, rerunnable script for that: `node supabase/verify-local-rls.mjs` against a running local stack. When a migration adds or changes an RLS policy whose guarantee matters (ownership scoping, uniqueness), add or extend an assertion in that script rather than relying on a one-off manual check.
 
 ### Comments
 
@@ -141,7 +147,9 @@ doorstead/
   lib/
     db/                 the ONLY place that imports @supabase/*
     listings/           contract + DefaultListingService + schemas + actions
-    auth/               session + admin gate
-  supabase/migrations/  numbered SQL migrations, run via supabase db push
-  supabase/seed.sql     dev-only test-admin seed
+    auth/               session + admin gate + buyer gate + Google sign-in
+    buyers/             contract + DefaultBuyerService + actions (save/shortlist)
+  supabase/migrations/       numbered SQL migrations, run via supabase db push
+  supabase/seed.sql          dev-only test-admin seed
+  supabase/verify-local-rls.mjs  reproducible RLS assertions against a local stack
 ```

@@ -1,0 +1,69 @@
+-- Doorstead V1 — my inquiries: buyer-scoped read (AGE-123)
+--
+-- ADDS one additive SELECT policy so a signed-in buyer can read the
+-- inquiries carrying their own account email — including ones sent before
+-- the account existed or while logged out (there is no buyer_id column;
+-- the email itself is the join key). Nothing existing is dropped or
+-- weakened: inquiries_anon_insert, the absent anon SELECT policy, and
+-- inquiries_admin_read (migration 0002) are untouched. Because Postgres
+-- OR-combines permissive policies, the effective inquiries SELECT boundary
+-- intentionally WIDENS from "admin-only" to "admin OR verified-self-email"
+-- — that widening is this issue's purpose, not a side effect.
+--
+-- Claim choice (load-bearing, confirmed against @supabase/auth-js's
+-- documented session/user shape and this project's supabase/config.toml
+-- before writing this policy — not assumed):
+--
+--   auth.jwt() ->> 'email'
+--
+-- NOT `auth.jwt() -> 'user_metadata' ->> 'email'` and NOT
+-- `... ->> 'email_verified'`. `user_metadata` (`raw_user_meta_data`) is
+-- writable by the signed-in user themselves via `supabase.auth.updateUser({
+-- data: {...} })` — GoTrueClient exposes exactly that call — so a hostile
+-- buyer could forge `user_metadata.email` or `user_metadata.email_verified`
+-- to claim any victim's inquiries. It must never be trusted for an
+-- authorization decision.
+--
+-- The top-level `email` JWT claim instead mirrors the `auth.users.email`
+-- column, which this project cannot be tricked into holding an unverified
+-- address:
+--   1. Google is the only sign-in provider wired up (lib/auth/service.ts
+--      `getGoogleSignInUrl`); Supabase sets `auth.users.email` at
+--      first sign-in from Google's own verified account email, not from
+--      anything the client supplies.
+--   2. This codebase has no call to `supabase.auth.updateUser({ email })`
+--      anywhere (grepped clean) — there is no in-app path for a buyer to
+--      retarget their own account email at all.
+--   3. Even if one existed, `double_confirm_changes = true`
+--      (supabase/config.toml) requires the OLD and the NEW mailbox to both
+--      confirm before an email change on `auth.users` takes effect, so a
+--      buyer could not silently claim someone else's inbox that way either.
+--
+-- So `auth.jwt() ->> 'email'` is the one claim in this project that is both
+-- present on every authenticated JWT and impossible for the caller to set
+-- to an address they do not own.
+--
+-- This still depends on one operational precondition this migration cannot
+-- enforce from inside Postgres: the hosted Supabase project's Auth ->
+-- Providers -> Email -> "Allow new users to sign up" must stay OFF (the
+-- README's first-deploy runbook, step 4, already requires this and marks it
+-- CRITICAL). If email/password self-signup were ever re-enabled there with
+-- confirmations off, an attacker could self-register a victim's address
+-- directly against Supabase's Auth REST API and obtain a JWT whose
+-- top-level `email` claim equals that address with no ownership proof —
+-- bypassing this policy without touching any code in this repo. That
+-- guardrail lives in Supabase project settings, not in a migration, and
+-- must be re-verified on every environment this migration is pushed to.
+--
+-- lower()-normalized on both sides: the anon-write path (inquiries_anon_
+-- insert / DefaultInquiryService.create) stores whatever case a visitor
+-- typed into the public form, with no normalization, and Google account
+-- emails aren't guaranteed to reach here in one canonical case either.
+-- Without lower(), "including inquiries sent before the account existed"
+-- (an explicit AGE-123 acceptance criterion) would silently break for any
+-- buyer whose pre-signup inquiry casing didn't byte-for-byte match their
+-- verified account email.
+
+create policy inquiries_buyer_read on inquiries
+  for select to authenticated
+  using (lower(email) = lower(auth.jwt() ->> 'email'));

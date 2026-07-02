@@ -21,4 +21,5 @@ export interface InquiryInput {
 export interface InquiryService {
   create(input: InquiryInput): Promise<void>
   listAll(): Promise<InquiryWithListing[]>
+  listForBuyer(email: string): Promise<InquiryWithListing[]>
 }
