@@ -21,6 +21,8 @@ function storedImage(over: Partial<StoredImage>): StoredImage {
   return {
     id: 'img-1',
     originalKey: 'listing/x/a.jpg',
+    webKey: 'listing/x/a.web.jpg',
+    thumbKey: 'listing/x/a.thumb.jpg',
     position: 0,
     isCover: false,
     isFloorplan: false,
@@ -73,23 +75,47 @@ beforeEach(() => {
 })
 
 describe('getImagesForRender', () => {
-  it('returns a signed url for each stored image, tagging floorplans', async () => {
+  it('signs the web variant as url and the thumb variant as thumbUrl, tagging floorplans', async () => {
     fakeMediaService.listForListingImpl = async () => [
-      storedImage({ id: 'a', originalKey: 'listing/x/a.jpg' }),
-      storedImage({ id: 'b', originalKey: 'listing/x/b.png', isFloorplan: true }),
+      storedImage({
+        id: 'a',
+        webKey: 'listing/x/a.web.jpg',
+        thumbKey: 'listing/x/a.thumb.jpg',
+      }),
+      storedImage({
+        id: 'b',
+        webKey: 'listing/x/b.web.png',
+        thumbKey: 'listing/x/b.thumb.png',
+        isFloorplan: true,
+      }),
     ]
     const service = makeService(baseListing({ photoUrls: [] }))
 
     const result = await service.getImagesForRender(LISTING_ID, 'public')
 
     expect(result).toEqual([
-      { url: 'https://signed.example/listing/x/a.jpg', isFloorplan: false },
-      { url: 'https://signed.example/listing/x/b.png', isFloorplan: true },
+      {
+        url: 'https://signed.example/listing/x/a.web.jpg',
+        thumbUrl: 'https://signed.example/listing/x/a.thumb.jpg',
+        isFloorplan: false,
+      },
+      {
+        url: 'https://signed.example/listing/x/b.web.png',
+        thumbUrl: 'https://signed.example/listing/x/b.thumb.png',
+        isFloorplan: true,
+      },
     ])
-    expect(signCalls).toEqual(['listing/x/a.jpg', 'listing/x/b.png'])
+    expect([...signCalls].sort()).toEqual(
+      [
+        'listing/x/a.web.jpg',
+        'listing/x/a.thumb.jpg',
+        'listing/x/b.web.png',
+        'listing/x/b.thumb.png',
+      ].sort(),
+    )
   })
 
-  it('passes legacy photo_urls through unsigned, not as floorplans', async () => {
+  it('passes legacy photo_urls through unsigned as both url and thumbUrl, not as floorplans', async () => {
     fakeMediaService.listForListingImpl = async () => []
     const service = makeService(
       baseListing({ photoUrls: ['https://legacy.example/1.jpg'] }),
@@ -98,14 +124,22 @@ describe('getImagesForRender', () => {
     const result = await service.getImagesForRender(LISTING_ID, 'public')
 
     expect(result).toEqual([
-      { url: 'https://legacy.example/1.jpg', isFloorplan: false },
+      {
+        url: 'https://legacy.example/1.jpg',
+        thumbUrl: 'https://legacy.example/1.jpg',
+        isFloorplan: false,
+      },
     ])
     expect(signCalls).toEqual([])
   })
 
   it('renders stored media before legacy urls for a mixed listing', async () => {
     fakeMediaService.listForListingImpl = async () => [
-      storedImage({ id: 'a', originalKey: 'listing/x/a.jpg' }),
+      storedImage({
+        id: 'a',
+        webKey: 'listing/x/a.web.jpg',
+        thumbKey: 'listing/x/a.thumb.jpg',
+      }),
     ]
     const service = makeService(
       baseListing({ photoUrls: ['https://legacy.example/1.jpg'] }),
@@ -114,8 +148,16 @@ describe('getImagesForRender', () => {
     const result = await service.getImagesForRender(LISTING_ID, 'public')
 
     expect(result).toEqual([
-      { url: 'https://signed.example/listing/x/a.jpg', isFloorplan: false },
-      { url: 'https://legacy.example/1.jpg', isFloorplan: false },
+      {
+        url: 'https://signed.example/listing/x/a.web.jpg',
+        thumbUrl: 'https://signed.example/listing/x/a.thumb.jpg',
+        isFloorplan: false,
+      },
+      {
+        url: 'https://legacy.example/1.jpg',
+        thumbUrl: 'https://legacy.example/1.jpg',
+        isFloorplan: false,
+      },
     ])
   })
 
@@ -139,7 +181,8 @@ describe('getImagesForRender', () => {
     expect(fakeMediaService.listForListingCalls).toEqual([
       { listingId: LISTING_ID, context: 'admin' },
     ])
-    expect(signContexts).toEqual(['admin'])
+    // Both the web and thumb signs run under the caller's context.
+    expect(signContexts).toEqual(['admin', 'admin'])
   })
 
   it('threads the public context to both the media read and the signer', async () => {
@@ -153,6 +196,6 @@ describe('getImagesForRender', () => {
     expect(fakeMediaService.listForListingCalls).toEqual([
       { listingId: LISTING_ID, context: 'public' },
     ])
-    expect(signContexts).toEqual(['public'])
+    expect(signContexts).toEqual(['public', 'public'])
   })
 })

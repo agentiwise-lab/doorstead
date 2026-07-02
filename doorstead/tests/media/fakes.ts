@@ -21,6 +21,8 @@ export class FakeMediaService implements MediaService {
   ) => Promise<StoredImage> = async () => ({
     id: '00000000-0000-0000-0000-0000000000aa',
     originalKey: 'listing/x/y.jpg',
+    webKey: 'listing/x/y.web.jpg',
+    thumbKey: 'listing/x/y.thumb.jpg',
     position: 0,
     isCover: false,
     isFloorplan: false,

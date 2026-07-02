@@ -15,6 +15,8 @@ export interface UploadFile {
 export interface StoredImage {
   id: string
   originalKey: string
+  webKey: string
+  thumbKey: string
   position: number
   isCover: boolean
   isFloorplan: boolean

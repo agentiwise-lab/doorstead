@@ -111,6 +111,8 @@ describe('uploadListingImage', () => {
       Array.from({ length: 30 }, (_, i) => ({
         id: `${i}`,
         originalKey: `k${i}`,
+        webKey: `k${i}.web`,
+        thumbKey: `k${i}.thumb`,
         position: i,
         isCover: false,
         isFloorplan: false,

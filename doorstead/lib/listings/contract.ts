@@ -40,6 +40,7 @@ export interface ListingInput {
 
 export interface RenderImage {
   url: string
+  thumbUrl: string
   isFloorplan: boolean
 }
 

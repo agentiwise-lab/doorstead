@@ -87,8 +87,9 @@ export class DefaultListingService implements ListingService {
     const stored = await this.media.listForListing(listingId, context)
     const storedImages: RenderImage[] = await Promise.all(
       stored.map(async (image) => ({
-        url: await this.signUrl(
-          image.originalKey,
+        url: await this.signUrl(image.webKey, SIGNED_URL_TTL_SECONDS, context),
+        thumbUrl: await this.signUrl(
+          image.thumbKey,
           SIGNED_URL_TTL_SECONDS,
           context,
         ),
@@ -98,7 +99,7 @@ export class DefaultListingService implements ListingService {
 
     const listing = await this.getById(listingId)
     const legacyImages: RenderImage[] = (listing?.photoUrls ?? []).map(
-      (url) => ({ url, isFloorplan: false }),
+      (url) => ({ url, thumbUrl: url, isFloorplan: false }),
     )
 
     return [...storedImages, ...legacyImages]
