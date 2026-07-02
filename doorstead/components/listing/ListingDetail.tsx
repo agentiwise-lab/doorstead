@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Listing } from '@/lib/listings/contract'
 import { PhotoGallery } from './PhotoGallery'
 import { InquiryForm } from './InquiryForm'
+import { SaveListingButton } from './SaveListingButton'
 import { PublicHeader } from '@/components/ui/PublicHeader'
 
 function BackButton() {
@@ -73,12 +74,17 @@ export function ListingDetail({ listing }: { listing: Listing }) {
         </section>
 
         <section className="mb-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
-            Guide price
-          </p>
-          <p className="mt-1 font-display text-3xl font-semibold tracking-tight text-brand-900 sm:text-4xl">
-            {formatPrice(listing.priceGbp)}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">
+                Guide price
+              </p>
+              <p className="mt-1 font-display text-3xl font-semibold tracking-tight text-brand-900 sm:text-4xl">
+                {formatPrice(listing.priceGbp)}
+              </p>
+            </div>
+            <SaveListingButton listingId={listing.id} />
+          </div>
           {facts.length > 0 && (
             <dl className="mt-6 grid grid-cols-2 gap-5 border-t border-brand-100 pt-6 sm:grid-cols-4">
               {facts.map((fact) => (
