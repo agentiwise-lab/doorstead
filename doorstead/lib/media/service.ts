@@ -112,6 +112,60 @@ export class DefaultMediaService implements MediaService {
     if (error) throw error
     return (data ?? []).map((row) => toStoredImage(row as MediaRow))
   }
+
+  async reorder(listingId: string, orderedImageIds: string[]): Promise<void> {
+    const client = createServerClient()
+    for (let position = 0; position < orderedImageIds.length; position++) {
+      const { error } = await client
+        .from('listing_media')
+        .update({ position })
+        .eq('listing_id', listingId)
+        .eq('id', orderedImageIds[position])
+      if (error) throw error
+    }
+  }
+
+  async setCover(listingId: string, imageId: string): Promise<void> {
+    await this.setExclusiveFlag(listingId, imageId, 'is_cover')
+  }
+
+  async setFloorplan(listingId: string, imageId: string): Promise<void> {
+    await this.setExclusiveFlag(listingId, imageId, 'is_floorplan')
+  }
+
+  async removeImage(listingId: string, imageId: string): Promise<void> {
+    const client = createServerClient()
+    const { error } = await client
+      .from('listing_media')
+      .delete()
+      .eq('listing_id', listingId)
+      .eq('id', imageId)
+    if (error) throw error
+  }
+
+  // Clear the flag across the listing, then set it on the target, so at most one
+  // row per listing carries it. Two scoped statements rather than one atomic
+  // write: Supabase JS cannot express a computed per-row boolean, and adding a
+  // partial-unique index for DB-level enforcement is out of scope for this unit.
+  private async setExclusiveFlag(
+    listingId: string,
+    imageId: string,
+    column: 'is_cover' | 'is_floorplan',
+  ): Promise<void> {
+    const client = createServerClient()
+    const cleared = await client
+      .from('listing_media')
+      .update({ [column]: false })
+      .eq('listing_id', listingId)
+    if (cleared.error) throw cleared.error
+
+    const set = await client
+      .from('listing_media')
+      .update({ [column]: true })
+      .eq('listing_id', listingId)
+      .eq('id', imageId)
+    if (set.error) throw set.error
+  }
 }
 
 export const mediaService: MediaService = new DefaultMediaService()

@@ -85,8 +85,13 @@ export class DefaultListingService implements ListingService {
     context: MediaContext,
   ): Promise<RenderImage[]> {
     const stored = await this.media.listForListing(listingId, context)
+    // Lead with the explicit cover; the rest keep their position order (the read
+    // is already position-ordered, and a stable sort preserves it).
+    const ordered = [...stored].sort(
+      (a, b) => Number(b.isCover) - Number(a.isCover),
+    )
     const storedImages: RenderImage[] = await Promise.all(
-      stored.map(async (image) => ({
+      ordered.map(async (image) => ({
         url: await this.signUrl(image.webKey, SIGNED_URL_TTL_SECONDS, context),
         thumbUrl: await this.signUrl(
           image.thumbKey,

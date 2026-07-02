@@ -115,6 +115,28 @@ describe('getImagesForRender', () => {
     )
   })
 
+  it('leads with the explicit cover, then keeps position order for the rest', async () => {
+    fakeMediaService.listForListingImpl = async () => [
+      storedImage({ id: 'a', webKey: 'a.web', thumbKey: 'a.thumb' }),
+      storedImage({
+        id: 'b',
+        webKey: 'b.web',
+        thumbKey: 'b.thumb',
+        isCover: true,
+      }),
+      storedImage({ id: 'c', webKey: 'c.web', thumbKey: 'c.thumb' }),
+    ]
+    const service = makeService(baseListing({ photoUrls: [] }))
+
+    const result = await service.getImagesForRender(LISTING_ID, 'public')
+
+    expect(result.map((r) => r.url)).toEqual([
+      'https://signed.example/b.web',
+      'https://signed.example/a.web',
+      'https://signed.example/c.web',
+    ])
+  })
+
   it('passes legacy photo_urls through unsigned as both url and thumbUrl, not as floorplans', async () => {
     fakeMediaService.listForListingImpl = async () => []
     const service = makeService(

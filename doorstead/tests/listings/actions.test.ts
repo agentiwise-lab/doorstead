@@ -43,6 +43,10 @@ const {
   publishListing,
   unpublishListing,
   deleteListing,
+  reorderListingImages,
+  setListingCover,
+  setListingFloorplan,
+  removeListingImage,
 } = await import('@/lib/listings/actions')
 const { revalidatePath } = await import('next/cache')
 const { redirect } = await import('next/navigation')
@@ -92,6 +96,11 @@ beforeEach(() => {
   fakeListingService.deleteImpl = async () => {}
   fakeMediaService.listForListingCalls = []
   fakeMediaService.listForListingImpl = async () => []
+  fakeMediaService.rows = {}
+  fakeMediaService.reorderCalls = []
+  fakeMediaService.setCoverCalls = []
+  fakeMediaService.setFloorplanCalls = []
+  fakeMediaService.removeImageCalls = []
   adminOk = true
   vi.mocked(revalidatePath).mockClear()
   vi.mocked(redirect).mockClear()
@@ -381,5 +390,135 @@ describe('deleteListing', () => {
       'Unauthorized',
     )
     expect(fakeListingService.deleteCalls.length).toBe(0)
+  })
+})
+
+describe('reorderListingImages', () => {
+  const ID = '55555555-5555-5555-5555-555555555555'
+
+  function makeFd(orderedImageIds: string): FormData {
+    const fd = new FormData()
+    fd.append('id', ID)
+    fd.append('orderedImageIds', orderedImageIds)
+    return fd
+  }
+
+  it('delegates the parsed order to media.reorder and revalidates', async () => {
+    fakeMediaService.rows[ID] = [
+      { id: 'a', originalKey: '', webKey: '', thumbKey: '', position: 0, isCover: false, isFloorplan: false },
+      { id: 'b', originalKey: '', webKey: '', thumbKey: '', position: 1, isCover: false, isFloorplan: false },
+      { id: 'c', originalKey: '', webKey: '', thumbKey: '', position: 2, isCover: false, isFloorplan: false },
+    ]
+
+    await expect(reorderListingImages(makeFd('c,a,b'))).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeMediaService.reorderCalls).toEqual([
+      { listingId: ID, orderedImageIds: ['c', 'a', 'b'] },
+    ])
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/listing/${ID}`)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/admin/${ID}/edit`)
+  })
+
+  it('throws Unauthorized when not admin', async () => {
+    adminOk = false
+    await expect(reorderListingImages(makeFd('c,a,b'))).rejects.toThrow(
+      'Unauthorized',
+    )
+    expect(fakeMediaService.reorderCalls.length).toBe(0)
+  })
+})
+
+describe('setListingCover', () => {
+  const ID = '66666666-6666-6666-6666-666666666666'
+
+  function makeFd(imageId: string): FormData {
+    const fd = new FormData()
+    fd.append('id', ID)
+    fd.append('imageId', imageId)
+    return fd
+  }
+
+  it('delegates to media.setCover and revalidates', async () => {
+    await expect(setListingCover(makeFd('img-9'))).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeMediaService.setCoverCalls).toEqual([
+      { listingId: ID, imageId: 'img-9' },
+    ])
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/listing/${ID}`)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/admin/${ID}/edit`)
+  })
+
+  it('throws Unauthorized when not admin', async () => {
+    adminOk = false
+    await expect(setListingCover(makeFd('img-9'))).rejects.toThrow(
+      'Unauthorized',
+    )
+    expect(fakeMediaService.setCoverCalls.length).toBe(0)
+  })
+})
+
+describe('setListingFloorplan', () => {
+  const ID = '77777777-7777-7777-7777-777777777777'
+
+  function makeFd(imageId: string): FormData {
+    const fd = new FormData()
+    fd.append('id', ID)
+    fd.append('imageId', imageId)
+    return fd
+  }
+
+  it('delegates to media.setFloorplan and revalidates', async () => {
+    await expect(setListingFloorplan(makeFd('img-3'))).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeMediaService.setFloorplanCalls).toEqual([
+      { listingId: ID, imageId: 'img-3' },
+    ])
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/listing/${ID}`)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/admin/${ID}/edit`)
+  })
+
+  it('throws Unauthorized when not admin', async () => {
+    adminOk = false
+    await expect(setListingFloorplan(makeFd('img-3'))).rejects.toThrow(
+      'Unauthorized',
+    )
+    expect(fakeMediaService.setFloorplanCalls.length).toBe(0)
+  })
+})
+
+describe('removeListingImage', () => {
+  const ID = '88888888-8888-8888-8888-888888888888'
+
+  function makeFd(imageId: string): FormData {
+    const fd = new FormData()
+    fd.append('id', ID)
+    fd.append('imageId', imageId)
+    return fd
+  }
+
+  it('delegates to media.removeImage and revalidates', async () => {
+    await expect(removeListingImage(makeFd('img-7'))).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
+
+    expect(fakeMediaService.removeImageCalls).toEqual([
+      { listingId: ID, imageId: 'img-7' },
+    ])
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/listing/${ID}`)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/admin/${ID}/edit`)
+  })
+
+  it('throws Unauthorized when not admin', async () => {
+    adminOk = false
+    await expect(removeListingImage(makeFd('img-7'))).rejects.toThrow(
+      'Unauthorized',
+    )
+    expect(fakeMediaService.removeImageCalls.length).toBe(0)
   })
 })

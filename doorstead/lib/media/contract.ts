@@ -28,4 +28,8 @@ export interface MediaService {
     listingId: string,
     context: MediaContext,
   ): Promise<StoredImage[]>
+  reorder(listingId: string, orderedImageIds: string[]): Promise<void>
+  setCover(listingId: string, imageId: string): Promise<void>
+  setFloorplan(listingId: string, imageId: string): Promise<void>
+  removeImage(listingId: string, imageId: string): Promise<void>
 }

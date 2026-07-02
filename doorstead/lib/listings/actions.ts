@@ -265,6 +265,69 @@ export async function uploadListingImage(
   redirect(`/admin/${id}/edit`)
 }
 
+export async function reorderListingImages(formData: FormData): Promise<void> {
+  await authService.requireAdmin()
+
+  const id = readString(formData, 'id')
+  if (!id) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  const orderedImageIds = readString(formData, 'orderedImageIds')
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value) => value !== '')
+  await mediaService.reorder(id, orderedImageIds)
+
+  revalidatePath(`/listing/${id}`)
+  redirect(`/admin/${id}/edit`)
+}
+
+export async function setListingCover(formData: FormData): Promise<void> {
+  await authService.requireAdmin()
+
+  const id = readString(formData, 'id')
+  const imageId = readString(formData, 'imageId')
+  if (!id || !imageId) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  await mediaService.setCover(id, imageId)
+
+  revalidatePath(`/listing/${id}`)
+  redirect(`/admin/${id}/edit`)
+}
+
+export async function setListingFloorplan(formData: FormData): Promise<void> {
+  await authService.requireAdmin()
+
+  const id = readString(formData, 'id')
+  const imageId = readString(formData, 'imageId')
+  if (!id || !imageId) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  await mediaService.setFloorplan(id, imageId)
+
+  revalidatePath(`/listing/${id}`)
+  redirect(`/admin/${id}/edit`)
+}
+
+export async function removeListingImage(formData: FormData): Promise<void> {
+  await authService.requireAdmin()
+
+  const id = readString(formData, 'id')
+  const imageId = readString(formData, 'imageId')
+  if (!id || !imageId) {
+    redirect('/admin?msg=listing-missing')
+  }
+
+  await mediaService.removeImage(id, imageId)
+
+  revalidatePath(`/listing/${id}`)
+  redirect(`/admin/${id}/edit`)
+}
+
 export async function deleteListing(formData: FormData): Promise<void> {
   await authService.requireAdmin()
 
