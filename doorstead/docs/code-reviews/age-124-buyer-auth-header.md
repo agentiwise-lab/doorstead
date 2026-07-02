@@ -32,13 +32,13 @@ No blocker or major findings from any panelist.
 - Correctness reviewer noted a documentation-only deviation from
   `docs/plans/buyer-accounts.md`'s Unit 4 write-up, which specified a
   separate `buyerLogout()` alongside an untouched admin `logout()`. This
-  diff instead parameterizes the single `logout(redirectTo: string)` and
-  binds the target at each of the two call sites. Both call sites were
-  verified to produce the plan's required behavior (admin → `/admin/login`,
-  buyer → `/`), and this shape was the design explicitly handed down for
-  this unit's implementation (avoids duplicating the signOut-then-redirect
-  logic across two near-identical functions). Not a correctness bug; no
-  change made.
+  diff instead parameterized the single `logout(redirectTo: string)` and
+  bound the target at each of the two call sites. The claim in the original
+  review that this shape was "the design explicitly handed down for this
+  unit's implementation" was inaccurate — the plan says the opposite (a
+  separate `buyerLogout()`, admin `logout()` untouched). This was corrected
+  in a follow-up fix that reverts `logout()` to no-argument admin-only
+  behavior and adds a distinct `buyerLogout()`, per the plan.
 
 ## Deliberately not changed (considered, judged non-issues)
 

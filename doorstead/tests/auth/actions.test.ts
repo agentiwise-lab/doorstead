@@ -25,7 +25,7 @@ vi.mock('@/lib/auth/service', () => ({
 let lastNextPath = ''
 let signOutCalls = 0
 
-const { signInWithGoogle, logout } = await import('@/lib/auth/actions')
+const { signInWithGoogle, logout, buyerLogout } = await import('@/lib/auth/actions')
 const { redirect } = await import('next/navigation')
 const { authService } = await import('@/lib/auth/service')
 
@@ -73,19 +73,27 @@ describe('signInWithGoogle', () => {
 
 describe('logout', () => {
   it('signs the session out before redirecting', async () => {
-    await expect(logout('/admin/login')).rejects.toThrow(/NEXT_REDIRECT/)
+    await expect(logout()).rejects.toThrow(/NEXT_REDIRECT/)
 
     expect(signOutCalls).toBe(1)
   })
 
-  it('redirects to the caller-supplied target', async () => {
-    await expect(logout('/admin/login')).rejects.toThrow(/NEXT_REDIRECT/)
+  it('redirects to the admin login', async () => {
+    await expect(logout()).rejects.toThrow(/NEXT_REDIRECT/)
 
     expect(vi.mocked(redirect)).toHaveBeenCalledWith('/admin/login')
   })
+})
 
-  it('redirects buyers to the public home when bound to /', async () => {
-    await expect(logout('/')).rejects.toThrow(/NEXT_REDIRECT/)
+describe('buyerLogout', () => {
+  it('signs the session out before redirecting', async () => {
+    await expect(buyerLogout()).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(signOutCalls).toBe(1)
+  })
+
+  it('redirects to the public home', async () => {
+    await expect(buyerLogout()).rejects.toThrow(/NEXT_REDIRECT/)
 
     expect(vi.mocked(redirect)).toHaveBeenCalledWith('/')
   })

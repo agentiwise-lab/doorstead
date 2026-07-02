@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Session } from '@/lib/auth/contract'
-import { logout } from '@/lib/auth/actions'
+import { buyerLogout } from '@/lib/auth/actions'
 
 const linkClass = 'font-medium text-brand-700 transition hover:text-brand-900'
 
@@ -24,7 +24,7 @@ export function BuyerAuthCluster({ session }: { session: Session | null }) {
       <Link href="/my-inquiries" className={linkClass}>
         My inquiries
       </Link>
-      <form action={logout.bind(null, '/')}>
+      <form action={buyerLogout}>
         <button type="submit" className={linkClass}>
           Sign out
         </button>
