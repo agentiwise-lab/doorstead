@@ -1,25 +1,28 @@
-# Implementing an Issue
+# Merging Agent PRs
 
-_Done. You are on `04_end`._
+_Reviewing and merging the loop's PR. You are on `07_begin`._
 
-## Built: AGE-114, the tracer
-An admin uploads one image, Doorstead stores it in a private bucket plus one `listing_media` row, and the public listing page renders it via a signed link. Backend built red-green-refactor. `feat/listing-image-uploads` was cut from `04_begin` and merged here.
-- Files: migration `0003_listing_media.sql`, `lib/db/storage.ts`, `lib/media/{contract,service}.ts`, `getImagesForRender` on `ListingService`, the `uploadListingImage` action, the upload form, and the public render.
-- Tests: 60 passed (10 new), typecheck clean. Contract-level `FakeMediaService`; no test touches real Supabase.
+## Starting point
+The loop opened one pull request, `feat/listing-image-uploads` into `04_end`, carrying AGE-115 to AGE-119. AGE-120 (the destructive upload UI) is held at the issue level and never entered the PR. CI is green and each unit carries a per-issue bot review, but not one line has been read by a human.
 
-## Decisions
-- Signed-URL TTL -> 1 hour.
-- `getImagesForRender` owned by `ListingService`, depends on the `MediaService` contract only.
-- Migration written, not applied: the shared dev database is untouched, apply it on deploy.
+## The job
+Be the gate. Review the whole PR at two altitudes, `/review-code` on the changeset and `/review-pr` at the merge boundary, for the cross-file coherence the per-issue passes never saw. Re-verify the merge gate (CI green, a fresh review PASS at the head SHA, every thread resolved). Fix anything the review finds, or file it, then squash-merge on explicit confirmation. Never merge a destructive change without sign-off.
 
-## Code review
-`/review-code` on the tracer diff. Full review: `doorstead/docs/code-reviews/age-114-tracer.md`. Spec-compliance FAIL, code-quality PASS: the tests were green, the review caught what they could not.
-- Admin edit page 500s on a draft (blocker): `getImagesForRender` signs via anon, anon RLS is live-only -> sign via the server client on admin routes (client keyed off trust context, not operation).
-- Public read mixes clients (minor): `listing_media` read via the server client on the public page -> route it through the anon client.
-- One bad key fails the whole page via `Promise.all` (minor): deferred to Unit 3.
-- Verified clean: admin gate, RLS pattern, real contract tests, no slop.
+## Run
+```
+/review-pr feat/listing-image-uploads     # review the whole PR, verify the gate
+# fix what the review finds (or file it), re-verify from a clean trunk
+gh pr merge <n> --squash --delete-branch   # merge on confirmation, re-verify trunk
+```
 
-Fixed 1 and 2 with a `MediaContext` (admin vs public) seam that selects the client per trust context; 66 tests green, typecheck clean.
+## Result
+- The whole PR reviewed at the PR boundary; findings recorded in `doorstead/docs/ship/listing-image-uploads.md`.
+- Real defects fixed before merge or filed as follow-ups.
+- The PR squash-merged into the trunk, re-verified from a clean checkout.
 
-## Next
-The series continues with loop engineering architecture.
+## Check
+```bash
+git checkout 07_end
+git diff 07_begin..07_end
+cat doorstead/docs/ship/listing-image-uploads.md
+```
