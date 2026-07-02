@@ -1,32 +1,26 @@
 # AFK Coding on Cloud
 
-_Taking the loop off your machine. You are on `v8_begin`._
+_Done. You are on `v8_end`._
 
-## Starting point
-The next feature, buyer-accounts, is fully drafted: brief, PRD, plan, plan-review, and a dependency-ordered set of Linear issues (`AGE-121` to `AGE-124`), all produced in the Conductor thread and cut from `main`. It is an independent feature, its own line, so this branch carries only its planning docs, not the image-uploads work. Every loop so far has run locally, with you at the keyboard.
+## Built: the loop, running cold
+The loop now runs off your machine. A saved Claude routine executes the orchestrator prompt (`doorstead/docs/prompts/afk-routine.md`) on a schedule, in a fresh cloud container cloned from the repo, connected to Linear and Slack. No laptop, nobody at the keyboard.
 
-## The job
-Lift the loop off your device. Configure a Claude routine that runs the orchestrator logic cold on a schedule, in a fresh cloud container cloned from the repo, connected to Linear and Slack. It lists the ready buyer-accounts issues, gates the destructive ones for sign-off, dispatches one fresh worker per issue (each worker self-reviews with `/review-code`, then the orchestrator reviews again independently), and raises reviewable PRs unattended. It never touches `main` and never runs a destructive change without a human's sign-off.
-
-The routine prompt lives in the repo: `doorstead/docs/prompts/afk-routine.md`. It is the loop written out as steps the routine runs cold every time.
-
-## Run
-```
-# In the routine config (cloud):
-#  1. Point it at the repo + the Linear Doorstead project + Slack.
-#  2. Paste doorstead/docs/prompts/afk-routine.md as the routine prompt.
-#  3. Set the schedule and wire the guardrails (no main, no destructive DB, branch-only).
-#  4. Let it run cold.
-```
+## How it runs each cycle
+- Lists the ready issues (Backlog or Todo), skips anything not ready, and defers a destructive issue unless it carries `destructive:signed-off`.
+- Dispatches one fresh worker per issue: the worker builds test-first, self-reviews its diff with `/review-code`, and returns. The orchestrator then reviews again independently, a second perspective, and dispatches a fix-worker for any auto-fixable findings.
+- Raises one reviewable PR per issue, never touching `main` and never merging its own work.
+- Reports a per-issue outcome to a Linear status update and Slack, with a push notification only when something ran.
 
 ## Result
-- A saved Claude routine running the loop cold on a schedule, guardrailed.
-- It drains the buyer-accounts backlog (`AGE-121` to `AGE-124`) into reviewable PRs while you are offline, each on a `feat/buyer-accounts` branch cut from this state.
-- State lives in the branch and the issues, so each run resumes cold and is safe to repeat.
+- The buyer-accounts backlog (`AGE-121` to `AGE-124`) drains into reviewable PRs while you are offline, each on its own `feat/buyer-accounts` branch cut from this state.
+- State lives in the branch and the issue, so the next run resumes cold and is safe to repeat.
+- You stay the merge gate: review each PR with the `/review-pr` cycle and merge on confirmation.
+
+## Note on this branch
+The routine's deliverable is reviewable PRs on GitHub, not a change to this trunk, so `v8_end` shares `v8_begin`'s code. The buyer-accounts feature itself is built by the routine, PR by PR, on `feat/buyer-accounts` branches.
 
 ## Check
 ```bash
-git checkout v8_end
 git diff v8_begin..v8_end
 cat doorstead/docs/prompts/afk-routine.md
 ```
