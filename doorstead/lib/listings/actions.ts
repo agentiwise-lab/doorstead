@@ -10,22 +10,24 @@ import {
   validateUpload,
 } from '@/lib/media/validation'
 import type { ListingInput, ListingStatus } from './contract'
-import { parsePhotoUrls } from './photo-urls'
 import { ListingDraftSchema, validateForPublish } from './schema'
 
-export type CreateListingState = {
-  fieldErrors?: Record<string, string>
-}
+// Create no longer redirects: the client stages files, then needs the new id to
+// upload them before it navigates. So the action hands the id back instead.
+export type CreateListingResult =
+  | { ok: true; id: string }
+  | { ok: false; fieldErrors: Record<string, string> }
 
 export type UpdateListingState = {
   fieldErrors?: Record<string, string>
 }
 
-// A rejected upload returns this state so the caller can surface the message.
-// A successful upload redirects and never returns.
-export type UploadImageState = {
-  error?: { reason: UploadRejectionReason; message: string }
-}
+// The client uploader drives uploads one file at a time and needs the outcome of
+// each to decide whether to continue, so upload returns a result rather than
+// redirecting the way form-post actions do.
+export type UploadResult =
+  | { ok: true }
+  | { ok: false; error: { reason: UploadRejectionReason | 'invalid'; message: string } }
 
 function readString(formData: FormData, name: string): string {
   const v = formData.get(name)
@@ -68,28 +70,15 @@ function toListingInput(value: DraftLike): ListingInput {
   }
 }
 
-type ParseResult =
-  | { ok: true; input: ListingInput; status: ListingStatus }
-  | { ok: false; fieldErrors: Record<string, string> }
-
-function parseListingFormData(formData: FormData): ParseResult {
-  const intentRaw = formData.get('intent')
-  const intent: ListingStatus = intentRaw === 'live' ? 'live' : 'draft'
-
-  const photoUrls = parsePhotoUrls(
-    typeof formData.get('photoUrls') === 'string'
-      ? (formData.get('photoUrls') as string)
-      : '',
-  )
-
-  const rawType = readType(formData)
-  const typeForSchema: string | undefined =
-    rawType === null ? undefined : rawType
-
-  const candidate: Record<string, unknown> = { photoUrls }
+// Photos no longer come through the form: images are uploaded separately to
+// listing_media, and legacy photo_urls are preserved from the stored row. So the
+// candidate carries only the text/number fields the form still owns.
+function buildCandidate(formData: FormData): Record<string, unknown> {
+  const candidate: Record<string, unknown> = {}
   const address = readString(formData, 'address')
   if (address) candidate.address = address
-  if (typeForSchema !== undefined) candidate.type = typeForSchema
+  const rawType = readType(formData)
+  if (rawType !== null) candidate.type = rawType
   const priceGbp = readNumberOrNull(formData, 'priceGbp')
   if (priceGbp !== null) candidate.priceGbp = priceGbp
   const beds = readNumberOrNull(formData, 'beds')
@@ -100,20 +89,20 @@ function parseListingFormData(formData: FormData): ParseResult {
   if (areaSqft !== null) candidate.areaSqft = areaSqft
   const description = readString(formData, 'description')
   if (description) candidate.description = description
+  return candidate
+}
 
-  if (intent === 'live') {
-    const result = validateForPublish(candidate, photoUrls.length)
-    if (!result.ok) {
-      const fieldErrors: Record<string, string> = {}
-      for (const f of result.missingFields) {
-        fieldErrors[f] = humanMessageFor(f)
-      }
-      return { ok: false, fieldErrors }
-    }
-    return { ok: true, input: result.value, status: 'live' }
-  }
+type DraftParse =
+  | { ok: true; input: ListingInput }
+  | { ok: false; fieldErrors: Record<string, string> }
 
-  const parsed = ListingDraftSchema.safeParse(candidate)
+// Draft parsing keeps the existing photo_urls (defaulting to none for a new
+// listing) so a save never wipes legacy photos it no longer renders in the form.
+function parseDraft(
+  formData: FormData,
+  existingPhotoUrls: string[],
+): DraftParse {
+  const parsed = ListingDraftSchema.safeParse(buildCandidate(formData))
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {}
     for (const issue of parsed.error.issues) {
@@ -124,22 +113,26 @@ function parseListingFormData(formData: FormData): ParseResult {
     }
     return { ok: false, fieldErrors }
   }
-  return { ok: true, input: toListingInput(parsed.data), status: 'draft' }
+  return {
+    ok: true,
+    input: toListingInput({ ...parsed.data, photoUrls: existingPhotoUrls }),
+  }
 }
 
 export async function createListing(
-  _prev: CreateListingState,
   formData: FormData,
-): Promise<CreateListingState> {
+): Promise<CreateListingResult> {
   await authService.requireAdmin()
 
-  const parsed = parseListingFormData(formData)
-  if (!parsed.ok) return { fieldErrors: parsed.fieldErrors }
+  // A new listing always starts as a draft: its images are uploaded after it
+  // exists (they need its id), and it is published separately once they land.
+  const parsed = parseDraft(formData, [])
+  if (!parsed.ok) return { ok: false, fieldErrors: parsed.fieldErrors }
 
-  await listingService.create(parsed.input, parsed.status)
+  const listing = await listingService.create(parsed.input, 'draft')
 
   revalidatePath('/')
-  redirect('/admin')
+  return { ok: true, id: listing.id }
 }
 
 export async function updateListing(
@@ -154,10 +147,36 @@ export async function updateListing(
     redirect('/admin?msg=listing-missing')
   }
 
-  const parsed = parseListingFormData(formData)
-  if (!parsed.ok) return { fieldErrors: parsed.fieldErrors }
+  const current = await listingService.getById(id)
+  if (current === null) {
+    redirect('/admin?msg=listing-missing')
+  }
 
-  const updated = await listingService.update(id, parsed.input, parsed.status)
+  const intent: ListingStatus =
+    formData.get('intent') === 'live' ? 'live' : 'draft'
+
+  let input: ListingInput
+  if (intent === 'live') {
+    // The publish photo requirement counts uploaded media plus any legacy urls,
+    // not a form field. Text/number fields still come from the form.
+    const uploadedCount = (await mediaService.listForListing(id, 'admin')).length
+    const imageCount = uploadedCount + current.photoUrls.length
+    const result = validateForPublish(buildCandidate(formData), imageCount)
+    if (!result.ok) {
+      const fieldErrors: Record<string, string> = {}
+      for (const f of result.missingFields) {
+        fieldErrors[f] = humanMessageFor(f)
+      }
+      return { fieldErrors }
+    }
+    input = { ...result.value, photoUrls: current.photoUrls }
+  } else {
+    const parsed = parseDraft(formData, current.photoUrls)
+    if (!parsed.ok) return { fieldErrors: parsed.fieldErrors }
+    input = parsed.input
+  }
+
+  const updated = await listingService.update(id, input, intent)
   if (updated === null) {
     redirect('/admin?msg=listing-missing')
   }
@@ -231,18 +250,19 @@ export async function unpublishListing(formData: FormData): Promise<void> {
 
 export async function uploadListingImage(
   formData: FormData,
-): Promise<UploadImageState> {
+): Promise<UploadResult> {
   await authService.requireAdmin()
 
-  const idRaw = formData.get('id')
-  const id = typeof idRaw === 'string' ? idRaw.trim() : ''
-  if (!id) {
-    redirect('/admin?msg=listing-missing')
-  }
-
+  const id = readString(formData, 'id')
   const image = formData.get('image')
-  if (!(image instanceof File) || image.size === 0) {
-    redirect(`/admin/${id}/edit`)
+  if (!id || !(image instanceof File) || image.size === 0) {
+    return {
+      ok: false,
+      error: {
+        reason: 'invalid',
+        message: 'A listing id and an image file are required.',
+      },
+    }
   }
 
   const currentCount = (await mediaService.listForListing(id, 'admin')).length
@@ -251,7 +271,10 @@ export async function uploadListingImage(
     currentCount,
   )
   if (!validation.ok) {
-    return { error: { reason: validation.reason, message: validation.message } }
+    return {
+      ok: false,
+      error: { reason: validation.reason, message: validation.message },
+    }
   }
 
   const bytes = new Uint8Array(await image.arrayBuffer())
@@ -262,7 +285,7 @@ export async function uploadListingImage(
   })
 
   revalidatePath(`/listing/${id}`)
-  redirect(`/admin/${id}/edit`)
+  return { ok: true }
 }
 
 export async function reorderListingImages(formData: FormData): Promise<void> {

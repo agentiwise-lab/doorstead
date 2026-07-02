@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { FakeMediaService } from '../media/fakes'
 import { FakeListingService } from './fakes'
+import type { Listing } from '@/lib/listings/contract'
 
 const fakeListingService = new FakeListingService()
 const fakeMediaService = new FakeMediaService()
@@ -107,42 +108,45 @@ beforeEach(() => {
 })
 
 describe('createListing', () => {
-  it('returns fieldErrors for missing description on publish; does not call create or revalidatePath', async () => {
-    const fd = makeFormData({
-      intent: 'live',
-      address: '12 Baker Street',
-      type: 'House',
-      priceGbp: '500000',
-      beds: '3',
-      baths: '2',
-      areaSqft: '1200',
-      description: '',
-      photoUrls: 'https://example.com/x.jpg',
+  it('creates a draft and returns its new id; revalidates the home page', async () => {
+    const fd = makeFormData({ address: '12 Baker Street', type: 'House' })
+
+    const result = await createListing(fd)
+
+    expect(result).toEqual({
+      ok: true,
+      id: '00000000-0000-0000-0000-000000000001',
     })
-
-    const result = await createListing({}, fd)
-
-    expect(result.fieldErrors).toBeDefined()
-    expect(result.fieldErrors!.description).toBeTruthy()
-    expect(fakeListingService.createCalls.length).toBe(0)
-    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled()
-  })
-
-  it('on draft with empty body, calls create with status=draft, revalidatePath, redirect', async () => {
-    const fd = makeFormData({ intent: 'draft', photoUrls: '' })
-
-    await expect(createListing({}, fd)).rejects.toThrow(/NEXT_REDIRECT/)
-
     expect(fakeListingService.createCalls.length).toBe(1)
     expect(fakeListingService.createCalls[0].status).toBe('draft')
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/')
-    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/admin')
+  })
+
+  it('creates a draft even with an empty body (all draft fields optional)', async () => {
+    const fd = makeFormData({})
+
+    const result = await createListing(fd)
+
+    expect(result.ok).toBe(true)
+    expect(fakeListingService.createCalls.length).toBe(1)
+    expect(fakeListingService.createCalls[0].status).toBe('draft')
+  })
+
+  it('returns fieldErrors for an invalid field and does not create', async () => {
+    const fd = makeFormData({ priceGbp: '-5' })
+
+    const result = await createListing(fd)
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error('expected failure')
+    expect(result.fieldErrors.priceGbp).toBeTruthy()
+    expect(fakeListingService.createCalls.length).toBe(0)
   })
 
   it('throws Unauthorized when not admin', async () => {
     adminOk = false
-    const fd = makeFormData({ intent: 'draft' })
-    await expect(createListing({}, fd)).rejects.toThrow('Unauthorized')
+    const fd = makeFormData({})
+    await expect(createListing(fd)).rejects.toThrow('Unauthorized')
     expect(fakeListingService.createCalls.length).toBe(0)
   })
 })
@@ -159,35 +163,113 @@ describe('updateListing', () => {
     baths: '2',
     areaSqft: '1200',
     description: 'A lovely home.',
-    photoUrls: 'https://example.com/x.jpg',
   }
 
-  it('redirects to /admin?msg=listing-missing when service returns null; does not revalidate', async () => {
-    fakeListingService.updateImpl = async () => null
+  function currentListing(over: Partial<Listing> = {}): Listing {
+    return {
+      id: ID,
+      address: '12 Baker Street',
+      type: 'House' as const,
+      priceGbp: 500000,
+      beds: 3,
+      baths: 2,
+      areaSqft: 1200,
+      status: 'draft' as const,
+      description: 'A lovely home.',
+      photoUrls: ['https://legacy.example/1.jpg'],
+      createdAt: '2026-06-26T00:00:00Z',
+      updatedAt: '2026-06-26T00:00:00Z',
+      ...over,
+    }
+  }
+
+  it('redirects to /admin?msg=listing-missing when the listing does not exist; no update', async () => {
+    fakeListingService.getByIdImpl = async () => null
     const fd = makeFormData(validLiveForm)
 
     await expect(updateListing({}, fd)).rejects.toThrow(/NEXT_REDIRECT/)
 
-    expect(fakeListingService.updateCalls.length).toBe(1)
+    expect(fakeListingService.updateCalls.length).toBe(0)
     expect(vi.mocked(redirect)).toHaveBeenCalledWith(
       '/admin?msg=listing-missing',
     )
-    expect(vi.mocked(revalidatePath)).not.toHaveBeenCalled()
   })
 
-  it('on valid data calls update(id, input, live) and revalidates / and /listing/${id}', async () => {
+  it('publishes when an uploaded image exists, preserving legacy photoUrls', async () => {
+    fakeListingService.getByIdImpl = async () =>
+      currentListing({ photoUrls: [] })
+    fakeMediaService.listForListingImpl = async () => [
+      {
+        id: 'm1',
+        originalKey: 'k',
+        webKey: 'k.web',
+        thumbKey: 'k.thumb',
+        position: 0,
+        isCover: false,
+        isFloorplan: false,
+      },
+    ]
     const fd = makeFormData(validLiveForm)
 
     await expect(updateListing({}, fd)).rejects.toThrow(/NEXT_REDIRECT/)
 
     expect(fakeListingService.updateCalls.length).toBe(1)
     const call = fakeListingService.updateCalls[0]
-    expect(call.id).toBe(ID)
     expect(call.status).toBe('live')
     expect(call.input.address).toBe('12 Baker Street')
-    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/')
+    // legacy urls are preserved from the stored row, never wiped by the save.
+    expect(call.input.photoUrls).toEqual([])
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(`/listing/${ID}`)
     expect(vi.mocked(redirect)).toHaveBeenCalledWith('/admin')
+  })
+
+  it('preserves legacy photoUrls through a publish when there are no uploads', async () => {
+    fakeListingService.getByIdImpl = async () => currentListing()
+    fakeMediaService.listForListingImpl = async () => []
+    const fd = makeFormData(validLiveForm)
+
+    await expect(updateListing({}, fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    const call = fakeListingService.updateCalls[0]
+    expect(call.status).toBe('live')
+    expect(call.input.photoUrls).toEqual(['https://legacy.example/1.jpg'])
+  })
+
+  it('refuses to publish with no uploads and no legacy urls; returns photoUrls error, no update', async () => {
+    fakeListingService.getByIdImpl = async () =>
+      currentListing({ photoUrls: [] })
+    fakeMediaService.listForListingImpl = async () => []
+    const fd = makeFormData(validLiveForm)
+
+    const result = await updateListing({}, fd)
+
+    expect(result.fieldErrors?.photoUrls).toBeTruthy()
+    expect(fakeListingService.updateCalls.length).toBe(0)
+    expect(vi.mocked(redirect)).not.toHaveBeenCalled()
+  })
+
+  it('saves a draft, preserving legacy photoUrls', async () => {
+    fakeListingService.getByIdImpl = async () => currentListing()
+    const fd = makeFormData({ id: ID, intent: 'draft', address: 'New Road' })
+
+    await expect(updateListing({}, fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    const call = fakeListingService.updateCalls[0]
+    expect(call.status).toBe('draft')
+    expect(call.input.address).toBe('New Road')
+    expect(call.input.photoUrls).toEqual(['https://legacy.example/1.jpg'])
+  })
+
+  it('redirects to /admin?msg=listing-missing when update returns null', async () => {
+    fakeListingService.getByIdImpl = async () => currentListing()
+    fakeListingService.updateImpl = async () => null
+    const fd = makeFormData(validLiveForm)
+
+    await expect(updateListing({}, fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+      '/admin?msg=listing-missing',
+    )
   })
 
   it('throws Unauthorized when not admin', async () => {

@@ -44,6 +44,16 @@ export interface RenderImage {
   isFloorplan: boolean
 }
 
+// The admin editor needs each image's id and flags to drive the reorder, cover,
+// floorplan, and remove controls. RenderImage deliberately omits the id (a
+// public visitor never needs it); this is its admin-side counterpart.
+export interface AdminImage {
+  id: string
+  thumbUrl: string
+  isCover: boolean
+  isFloorplan: boolean
+}
+
 export interface ListingService {
   listLive(): Promise<Listing[]>
   listAll(): Promise<Listing[]>
@@ -52,6 +62,7 @@ export interface ListingService {
     listingId: string,
     context: MediaContext,
   ): Promise<RenderImage[]>
+  getAdminImages(listingId: string): Promise<AdminImage[]>
   create(input: ListingInput, status: ListingStatus): Promise<Listing>
   update(
     id: string,

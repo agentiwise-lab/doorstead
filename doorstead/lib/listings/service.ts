@@ -5,6 +5,7 @@ import { createSignedUrl } from '@/lib/db/storage'
 import { mediaService as defaultMediaService } from '@/lib/media/service'
 import type { MediaContext, MediaService } from '@/lib/media/contract'
 import type {
+  AdminImage,
   Listing,
   ListingInput,
   ListingService,
@@ -116,6 +117,34 @@ export class DefaultListingService implements ListingService {
     )
 
     return [...storedImages, ...legacyImages]
+  }
+
+  async getAdminImages(listingId: string): Promise<AdminImage[]> {
+    // Position order (not cover-first): the editor's reorder handles operate on
+    // position, so the list must mirror the stored order. Cover is surfaced via
+    // the flag, not by reordering. Signs the thumb under the admin context so a
+    // draft's objects resolve; drops any tile whose signing fails.
+    const stored = await this.media.listForListing(listingId, 'admin')
+    const signed = await Promise.all(
+      stored.map(async (image): Promise<AdminImage | null> => {
+        try {
+          const thumbUrl = await this.signUrl(
+            image.thumbKey,
+            SIGNED_URL_TTL_SECONDS,
+            'admin',
+          )
+          return {
+            id: image.id,
+            thumbUrl,
+            isCover: image.isCover,
+            isFloorplan: image.isFloorplan,
+          }
+        } catch {
+          return null
+        }
+      }),
+    )
+    return signed.filter((image): image is AdminImage => image !== null)
   }
 
   async listLive(): Promise<Listing[]> {

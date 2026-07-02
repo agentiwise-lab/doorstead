@@ -1,4 +1,5 @@
 import type {
+  AdminImage,
   Listing,
   ListingInput,
   ListingService,
@@ -25,6 +26,7 @@ export class FakeListingService implements ListingService {
     id: string,
     context: MediaContext,
   ) => Promise<RenderImage[]> = async () => []
+  getAdminImagesImpl: (id: string) => Promise<AdminImage[]> = async () => []
   setStatusImpl: (
     id: string,
     status: ListingStatus,
@@ -91,6 +93,9 @@ export class FakeListingService implements ListingService {
     context: MediaContext,
   ): Promise<RenderImage[]> {
     return this.getImagesForRenderImpl(id, context)
+  }
+  async getAdminImages(id: string): Promise<AdminImage[]> {
+    return this.getAdminImagesImpl(id)
   }
   async create(input: ListingInput, status: ListingStatus): Promise<Listing> {
     this.createCalls.push({ input, status })
