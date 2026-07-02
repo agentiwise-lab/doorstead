@@ -1,6 +1,6 @@
 # AFK Coding on Cloud
 
-_Taking the loop off your machine. You are on `v8_begin`._
+_Taking the loop off your machine. You are on `08_begin`._
 
 ## Starting point
 The next feature, buyer-accounts, is fully drafted: brief, PRD, plan, plan-review, and a dependency-ordered set of Linear issues (`AGE-121` to `AGE-124`), all produced in the Conductor thread and cut from `main`. It is an independent feature, its own line, so this branch carries only its planning docs, not the image-uploads work. Every loop so far has run locally, with you at the keyboard.
@@ -26,7 +26,7 @@ The routine prompt lives in the repo: `doorstead/docs/prompts/afk-routine.md`. I
 
 ## Check
 ```bash
-git checkout v8_end
-git diff v8_begin..v8_end
+git checkout 08_end
+git diff 08_begin..08_end
 cat doorstead/docs/prompts/afk-routine.md
 ```
