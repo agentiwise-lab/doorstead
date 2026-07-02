@@ -1,28 +1,23 @@
 # Merging Agent PRs
 
-_Reviewing and merging the loop's PR. You are on `07_begin`._
+_Done. You are on `07_end`._
 
-## Starting point
-The loop opened one pull request, `feat/listing-image-uploads` into `04_end`, carrying AGE-115 to AGE-119. AGE-120 (the destructive upload UI) is held at the issue level and never entered the PR. CI is green and each unit carries a per-issue bot review, but not one line has been read by a human.
+## Reviewed and merged: AGE-115 to AGE-119
+The loop's one pull request (`feat/listing-image-uploads`) was reviewed at the PR boundary and squash-merged into the trunk. AGE-120 stays held at the issue level; it was never in the PR.
 
-## The job
-Be the gate. Review the whole PR at two altitudes, `/review-code` on the changeset and `/review-pr` at the merge boundary, for the cross-file coherence the per-issue passes never saw. Re-verify the merge gate (CI green, a fresh review PASS at the head SHA, every thread resolved). Fix anything the review finds, or file it, then squash-merge on explicit confirmation. Never merge a destructive change without sign-off.
+## The review found one real defect
+`/review-pr` ran a cross-file panel, correctness, security, and tests/scope, over the whole changeset, the coherence the per-issue reviews never saw:
+- **Major (correctness):** newly uploaded images all shared `position = 0` with no tiebreaker, so image order and the cover fallback were non-deterministic until a manual reorder. Fixed before merge with a stable `created_at` secondary sort in `listForListing`.
+- **Minor:** reorder renumbers only the displayed images (AGE-125); `storeImage` can orphan storage objects on a partial upload failure (AGE-126). Both filed as follow-ups.
+- **Security and tests/scope:** clean.
 
-## Run
-```
-/review-pr feat/listing-image-uploads     # review the whole PR, verify the gate
-# fix what the review finds (or file it), re-verify from a clean trunk
-gh pr merge <n> --squash --delete-branch   # merge on confirmation, re-verify trunk
-```
+## The gate
+CI green (102 tests, typecheck, build), no merge conflicts, a fresh review PASS at the head SHA after the fix, no open threads. Merged on explicit human confirmation.
 
-## Result
-- The whole PR reviewed at the PR boundary; findings recorded in `doorstead/docs/ship/listing-image-uploads.md`.
-- Real defects fixed before merge or filed as follow-ups.
-- The PR squash-merged into the trunk, re-verified from a clean checkout.
+## Artifacts
+- `doorstead/docs/ship/listing-image-uploads.md`: the `/review-pr` merge log.
 
 ## Check
 ```bash
-git checkout 07_end
 git diff 07_begin..07_end
-cat doorstead/docs/ship/listing-image-uploads.md
 ```

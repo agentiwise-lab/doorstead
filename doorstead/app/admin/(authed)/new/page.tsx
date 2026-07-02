@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { ListingForm } from '@/components/admin/ListingForm'
-import { createListing } from '@/lib/listings/actions'
+import { NewListingForm } from '@/components/admin/NewListingForm'
 
 export default function NewListingPage() {
   return (
@@ -16,7 +15,7 @@ export default function NewListingPage() {
           Cancel
         </Link>
       </div>
-      <ListingForm action={createListing} mode="create" />
+      <NewListingForm />
     </section>
   )
 }

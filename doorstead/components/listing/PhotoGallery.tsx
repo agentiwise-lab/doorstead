@@ -1,21 +1,22 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { RenderImage } from '@/lib/listings/contract'
 
 export function PhotoGallery({
-  photoUrls,
+  images,
   alt,
 }: {
-  photoUrls: string[]
+  images: RenderImage[]
   alt: string
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   useEffect(() => {
     setSelectedIndex(0)
-  }, [photoUrls])
+  }, [images])
 
-  if (photoUrls.length === 0) {
+  if (images.length === 0) {
     return (
       <div className="flex aspect-[16/9] w-full items-center justify-center rounded-2xl border border-brand-100 bg-brand-100/60 text-sm font-medium text-brand-600/70">
         No photos available
@@ -23,26 +24,26 @@ export function PhotoGallery({
     )
   }
 
-  const safeIndex = Math.min(selectedIndex, photoUrls.length - 1)
-  const selectedUrl = photoUrls[safeIndex]
+  const safeIndex = Math.min(selectedIndex, images.length - 1)
+  const selected = images[safeIndex]
 
   return (
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
         <div className="min-w-0 flex-1">
           <img
-            src={selectedUrl}
+            src={selected.url}
             alt={`${alt} (photo ${safeIndex + 1})`}
             className="aspect-[4/3] w-full rounded-2xl bg-brand-100 object-cover shadow-sm"
             loading="eager"
           />
         </div>
 
-        {photoUrls.length > 1 && (
+        {images.length > 1 && (
           <div className="flex flex-row gap-2 overflow-x-auto sm:w-28 sm:max-h-96 sm:min-h-0 sm:flex-col sm:overflow-x-visible sm:overflow-y-auto">
-            {photoUrls.map((url, index) => (
+            {images.map((image, index) => (
               <button
-                key={url}
+                key={image.thumbUrl}
                 type="button"
                 onClick={() => setSelectedIndex(index)}
                 aria-label={`View photo ${index + 1}`}
@@ -56,7 +57,7 @@ export function PhotoGallery({
                 ].join(' ')}
               >
                 <img
-                  src={url}
+                  src={image.thumbUrl}
                   alt={`${alt} (photo ${index + 1})`}
                   className="h-full w-full object-cover"
                   loading="lazy"
@@ -69,10 +70,10 @@ export function PhotoGallery({
 
       <noscript>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {photoUrls.map((url, index) => (
+          {images.map((image, index) => (
             <img
-              key={url}
-              src={url}
+              key={image.url}
+              src={image.url}
               alt={`${alt} (photo ${index + 1})`}
               className="aspect-[4/3] w-full rounded-2xl bg-brand-100 object-cover shadow-sm"
             />

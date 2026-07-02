@@ -1,6 +1,7 @@
 import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
 import { uploadObject } from '@/lib/db/storage'
+import { generateVariants } from './variants'
 import type {
   MediaContext,
   MediaService,
@@ -12,18 +13,34 @@ type MediaRow = {
   id: string
   listing_id: string
   original_key: string
+  web_key: string
+  thumb_key: string
   position: number
   is_cover: boolean
   is_floorplan: boolean
 }
 
+const MEDIA_COLUMNS =
+  'id, listing_id, original_key, web_key, thumb_key, position, is_cover, is_floorplan'
+
 const toStoredImage = (row: MediaRow): StoredImage => ({
   id: row.id,
   originalKey: row.original_key,
+  webKey: row.web_key,
+  thumbKey: row.thumb_key,
   position: row.position,
   isCover: row.is_cover,
   isFloorplan: row.is_floorplan,
 })
+
+// Variant keys derive from the original by inserting the variant marker before
+// the extension, so all three objects share one uuid stem and the extension
+// still reflects the (unchanged) format.
+const variantKey = (originalKey: string, variant: 'web' | 'thumb'): string => {
+  const dot = originalKey.lastIndexOf('.')
+  if (dot === -1) return `${originalKey}.${variant}`
+  return `${originalKey.slice(0, dot)}.${variant}${originalKey.slice(dot)}`
+}
 
 const extensionFor = (contentType: string): string => {
   switch (contentType) {
@@ -52,14 +69,26 @@ export function buildObjectKey(
 export class DefaultMediaService implements MediaService {
   async storeImage(listingId: string, file: UploadFile): Promise<StoredImage> {
     const key = buildObjectKey(listingId, file, crypto.randomUUID())
+    const webKey = variantKey(key, 'web')
+    const thumbKey = variantKey(key, 'thumb')
+
+    const { web, thumb, webContentType, thumbContentType } =
+      await generateVariants(file.bytes, file.contentType)
 
     await uploadObject(key, file.bytes, file.contentType)
+    await uploadObject(webKey, web, webContentType)
+    await uploadObject(thumbKey, thumb, thumbContentType)
 
     const client = createServerClient()
     const { data, error } = await client
       .from('listing_media')
-      .insert({ listing_id: listingId, original_key: key })
-      .select('id, listing_id, original_key, position, is_cover, is_floorplan')
+      .insert({
+        listing_id: listingId,
+        original_key: key,
+        web_key: webKey,
+        thumb_key: thumbKey,
+      })
+      .select(MEDIA_COLUMNS)
       .single()
 
     if (error) throw error
@@ -74,14 +103,73 @@ export class DefaultMediaService implements MediaService {
     // listings via listing_media_public_read (migration 0003); admin reads use
     // the server client so drafts resolve. Never mix clients across contexts.
     const client = context === 'admin' ? createServerClient() : anonClient
+    // position, then created_at as a stable tiebreaker: newly uploaded images
+    // all share the default position 0, so without a second key their order (and
+    // thus the cover fallback and gallery order) is arbitrary and flips between
+    // reloads. created_at falls that tie back to upload order.
     const { data, error } = await client
       .from('listing_media')
-      .select('id, listing_id, original_key, position, is_cover, is_floorplan')
+      .select(MEDIA_COLUMNS)
       .eq('listing_id', listingId)
       .order('position', { ascending: true })
+      .order('created_at', { ascending: true })
 
     if (error) throw error
     return (data ?? []).map((row) => toStoredImage(row as MediaRow))
+  }
+
+  async reorder(listingId: string, orderedImageIds: string[]): Promise<void> {
+    const client = createServerClient()
+    for (let position = 0; position < orderedImageIds.length; position++) {
+      const { error } = await client
+        .from('listing_media')
+        .update({ position })
+        .eq('listing_id', listingId)
+        .eq('id', orderedImageIds[position])
+      if (error) throw error
+    }
+  }
+
+  async setCover(listingId: string, imageId: string): Promise<void> {
+    await this.setExclusiveFlag(listingId, imageId, 'is_cover')
+  }
+
+  async setFloorplan(listingId: string, imageId: string): Promise<void> {
+    await this.setExclusiveFlag(listingId, imageId, 'is_floorplan')
+  }
+
+  async removeImage(listingId: string, imageId: string): Promise<void> {
+    const client = createServerClient()
+    const { error } = await client
+      .from('listing_media')
+      .delete()
+      .eq('listing_id', listingId)
+      .eq('id', imageId)
+    if (error) throw error
+  }
+
+  // Clear the flag across the listing, then set it on the target, so at most one
+  // row per listing carries it. Two scoped statements rather than one atomic
+  // write: Supabase JS cannot express a computed per-row boolean, and adding a
+  // partial-unique index for DB-level enforcement is out of scope for this unit.
+  private async setExclusiveFlag(
+    listingId: string,
+    imageId: string,
+    column: 'is_cover' | 'is_floorplan',
+  ): Promise<void> {
+    const client = createServerClient()
+    const cleared = await client
+      .from('listing_media')
+      .update({ [column]: false })
+      .eq('listing_id', listingId)
+    if (cleared.error) throw cleared.error
+
+    const set = await client
+      .from('listing_media')
+      .update({ [column]: true })
+      .eq('listing_id', listingId)
+      .eq('id', imageId)
+    if (set.error) throw set.error
   }
 }
 

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { Listing } from '@/lib/listings/contract'
+import type { Listing, RenderImage } from '@/lib/listings/contract'
 import { PhotoGallery } from './PhotoGallery'
 import { InquiryForm } from './InquiryForm'
 import { PublicHeader } from '@/components/ui/PublicHeader'
@@ -40,10 +40,10 @@ function Fact({ label, value }: { label: string; value: string }) {
 
 export function ListingDetail({
   listing,
-  imageUrls,
+  images,
 }: {
   listing: Listing
-  imageUrls: string[]
+  images: RenderImage[]
 }) {
   const address = listing.address ?? 'Address available on request'
   const area = formatArea(listing.areaSqft)
@@ -75,7 +75,7 @@ export function ListingDetail({
         </header>
 
         <section className="mb-8">
-          <PhotoGallery photoUrls={imageUrls} alt={address} />
+          <PhotoGallery images={images} alt={address} />
         </section>
 
         <section className="mb-8 rounded-2xl border border-brand-100 bg-white p-6 shadow-sm sm:p-8">

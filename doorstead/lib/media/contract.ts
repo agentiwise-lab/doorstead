@@ -15,6 +15,8 @@ export interface UploadFile {
 export interface StoredImage {
   id: string
   originalKey: string
+  webKey: string
+  thumbKey: string
   position: number
   isCover: boolean
   isFloorplan: boolean
@@ -26,4 +28,8 @@ export interface MediaService {
     listingId: string,
     context: MediaContext,
   ): Promise<StoredImage[]>
+  reorder(listingId: string, orderedImageIds: string[]): Promise<void>
+  setCover(listingId: string, imageId: string): Promise<void>
+  setFloorplan(listingId: string, imageId: string): Promise<void>
+  removeImage(listingId: string, imageId: string): Promise<void>
 }
