@@ -13,6 +13,17 @@ npm run dev
 
 Then open http://localhost:3000.
 
+## Test admin (dev only)
+
+So anyone can log in and exercise the admin (listings, image uploads), `supabase/seed.sql` seeds a ready-made admin:
+
+- **email:** `admin@doorstead.test`
+- **password:** `Passw0rd!demo`
+
+The seed runs automatically on `supabase db reset` against the local stack. For a hosted dev project, paste `supabase/seed.sql` into the SQL editor once. It is idempotent.
+
+**Dev only.** Never seed this known-password account into production; the first-deploy runbook below provisions the real admin separately.
+
 ## First-deploy runbook
 
 Do these once, in order, before the first push.
