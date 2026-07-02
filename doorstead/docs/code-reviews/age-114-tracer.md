@@ -1,0 +1,36 @@
+# Code Review: age-114-tracer  (mode: diff)
+
+Target: `git diff 04_begin..04_end` (commit `eb718a7`) — Unit 1 tracer for listing image uploads (AGE-114).
+Reviewed against: `docs/prds/listing-image-uploads.md`, `docs/plans/listing-image-uploads.md` (Unit 1 + Tracer bullet), and `doorstead/CLAUDE.md`.
+Lens: CODE+SLOP (correctness, security, performance, slop). Panel synthesized by a single judge.
+
+External API claims verified via live docs (Supabase Storage): `createSignedUrl` on a private bucket evaluates the SELECT RLS policy on `storage.objects` at mint time as the calling client's role, and returns a `404 Object not found` error (no `signedUrl`) when the policy denies. Sources: Supabase "Serving assets from Storage" / "Storage Buckets" docs (2026-06/07) and supabase-flutter#1051, supabase#29908 (RLS-false → not-found on `createSignedUrl`). This confirms the design's central claim: minting the URL as anon *is* the proof the anon SELECT policy passed.
+
+## Spec-compliance verdict: FAIL
+## Code-quality verdict: PASS
+
+The tracer's *stated* acceptance (public live listing renders one uploaded image via a signed link, admin-gated write) is met and the security boundary is correctly built. It FAILS spec-compliance on one count: the diff wires `getImagesForRender` into the **admin edit page**, which routes a draft listing's stored images through the anon-scoped signer and crashes the page. That path is outside the tracer's minimal scope and is broken.
+
+## Findings
+
+- [SEV: blocker] [CONF: 0.88] lib/listings/service.ts:78-93  (with app/admin/(authed)/[id]/edit/page.tsx:19)
+  Evidence: `getImagesForRender` signs every stored image via `this.signUrl` → `lib/db/storage.ts:createSignedUrl`, which uses the **anon** client. The anon SELECT policy `storage_listing_media_anon_read` (migration 0003, lines 77-88) only passes when the object's listing is `status='live' and deleted_at is null`. The admin edit page (`edit/page.tsx:19`) calls `getImagesForRender` for **any** listing — `getById` uses the server client and returns drafts (`service.ts:126-138`). A new listing defaults to `draft` (migration 0001; `actions.ts:117` saves `draft`), and `uploadListingImage` redirects to `/admin/${id}/edit` (`actions.ts:240`). So the tracer's own admin flow — create draft, upload image, land back on edit — signs a draft object as anon, the policy denies, `createSignedUrl` throws (verified: 404 not-found), and the edit page 500s. The public page is fine (only live listings reach it), but the admin surface the diff itself added is broken. Fix: on the admin/edit path, mint via the server client (admin write policy already grants `for all`, which includes SELECT), or gate the edit page to skip signing for non-live listings. The read-vs-write client split must key off trust context (admin route → server client), not off operation.
+
+- [SEV: minor] [CONF: 0.70] lib/media/service.ts:64  (with migration 0003:46-53)
+  Evidence: `listForListing` reads the `listing_media` table via `createServerClient()`, and it is the source of images for the **public** listing page (`app/listing/[id]/page.tsx:19`), an anon-context route. `CLAUDE.md` states "Public routes use anon. Admin routes use server-client. Never mix." The migration deliberately adds an anon SELECT policy on the `listing_media` table (`listing_media_public_read`, lines 46-53) precisely so the public read can go through the anon client — but the code never uses it; the server client (no admin cookie for a visitor → unauthenticated) happens to satisfy the anon table policy, so it works today. Net: a load-bearing anon policy is dead relative to the actual code path, and the public read mixes clients against the stated rule. Not a security hole (RLS still scopes to live listings), but it is architectural drift at the public/admin seam and will confuse Units 3/5/6, which extend this method. Fix: read `listing_media` via `anonClient` on the public path (mirroring how storage reads already do), or drop the unused anon table policy and document that the public read is server-client-with-anon-RLS by design.
+
+- [SEV: minor] [CONF: 0.62] lib/listings/service.ts:80-86
+  Evidence: stored images are signed inside `Promise.all`, so a single failing key rejects the whole render. On the public page this converts one bad/expired object into a full-page `notFound`/500 for an otherwise-valid live listing. Acceptable for a tracer (one image, no partial state yet), but flag it now because Units 3/5/6 grow this to N images with variants: one broken web/thumb key should degrade one tile, not the page. Not a blocker at this slice.
+
+## Non-findings (checked, deliberately not flagged)
+
+- Admin-gate on the upload action: correct. `uploadListingImage` calls `authService.requireAdmin()` as its first line (`actions.ts:221`), matching the `CLAUDE.md` "each action is its own gate" rule; `requireAdmin` verifies session via `getUser()` (JWT-verified) AND `admins` membership. The negative test `upload-image.actions.test.ts` asserts no store on unauthorized. Solid.
+- RLS design: the private bucket + admin-write + anon-read-scoped-to-live policies are correct and mirror the `listings_public_read` predicate (migration 0001) exactly, as the load-bearing comment claims and 0002 established as the house pattern. `createSignedUrl` correctly throws on `error` and on missing `signedUrl` (`storage.ts:31-33`).
+- Test integrity: real, not fake. `get-images-for-render.test.ts` drives `DefaultListingService` through the injected `FakeMediaService` + a spy signer and asserts stored-before-legacy order, floorplan tagging, legacy passthrough (unsigned), and empty-on-missing — break the impl (swap order, sign legacy, drop floorplan flag) and a case fails. `upload-image.actions.test.ts` asserts byte-for-byte payload, admin gate, and no-file no-op. `mediaService: {}` in the pre-existing `actions.test.ts:34` is an import-satisfying stub for a file that never calls `uploadListingImage` (which has its own suite) — not a fake-test. Tests hit the contract boundary, use fakes not mocks. All 47 pass (`vitest run tests/media tests/listings`).
+- Slop: none blocking. `buildObjectKey(listingId, file, uniqueId)` uses only `file.contentType` (mild over-parameterization) but `filename`/`bytes` on `UploadFile` are contract fields consumed by later units (validation, UI) — forward-looking, not dead. Comments are all WHY (load-bearing trust model, client-per-method rationale), consistent with the `CLAUDE.md` comment rule. No invented APIs (Supabase `createSignedUrl`/`upload` verified), no debug prints, no rollback-shim flags, no mocks of internal collaborators.
+
+## Priority-ranked actions
+
+1. Fix the draft-listing crash on the admin edit page (finding 1): sign via the server client on admin/edit paths, or skip signing for non-live listings. This is the tracer's own happy path and must work before the slice is "done."
+2. Resolve the public-read client mismatch (finding 2): route the `listing_media` public read through the anon client to honor the "never mix" rule and make the anon table policy real, or delete the unused policy and document the choice — settle it now, since Units 3/5/6 all extend this method.
+3. Before scaling to N images (Unit 3+), make per-image signing failure degrade one tile, not the whole page (finding 3).

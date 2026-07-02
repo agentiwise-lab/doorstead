@@ -1,4 +1,5 @@
 import { listingService } from '@/lib/listings/service'
+import { coverThumbUrl } from '@/lib/listings/render'
 import { ListingCard } from '@/components/listing/ListingCard'
 import { PublicHeader } from '@/components/ui/PublicHeader'
 
@@ -6,6 +7,17 @@ export const dynamic = "force-dynamic"
 
 export default async function HomePage() {
   const listings = await listingService.listLive()
+
+  // Resolve each card's cover through the same render path the gallery uses, so
+  // stored-only, legacy-only, and mixed listings show a cover identically.
+  const cards = await Promise.all(
+    listings.map(async (listing) => ({
+      listing,
+      coverThumbUrl: coverThumbUrl(
+        await listingService.getImagesForRender(listing.id, 'public'),
+      ),
+    })),
+  )
 
   return (
     <div className="min-h-screen bg-brand-50">
@@ -41,9 +53,9 @@ export default async function HomePage() {
           </div>
         ) : (
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => (
+            {cards.map(({ listing, coverThumbUrl }) => (
               <li key={listing.id}>
-                <ListingCard listing={listing} />
+                <ListingCard listing={listing} coverThumbUrl={coverThumbUrl} />
               </li>
             ))}
           </ul>

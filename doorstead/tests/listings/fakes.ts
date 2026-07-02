@@ -1,8 +1,11 @@
 import type {
+  AdminImage,
   Listing,
   ListingInput,
   ListingService,
   ListingStatus,
+  MediaContext,
+  RenderImage,
 } from '@/lib/listings/contract'
 
 export type CreateCall = { input: ListingInput; status: ListingStatus }
@@ -19,6 +22,11 @@ export class FakeListingService implements ListingService {
   setStatusCalls: SetStatusCall[] = []
   deleteCalls: string[] = []
   getByIdImpl: (id: string) => Promise<Listing | null> = async () => null
+  getImagesForRenderImpl: (
+    id: string,
+    context: MediaContext,
+  ) => Promise<RenderImage[]> = async () => []
+  getAdminImagesImpl: (id: string) => Promise<AdminImage[]> = async () => []
   setStatusImpl: (
     id: string,
     status: ListingStatus,
@@ -79,6 +87,15 @@ export class FakeListingService implements ListingService {
   }
   async getById(id: string): Promise<Listing | null> {
     return this.getByIdImpl(id)
+  }
+  async getImagesForRender(
+    id: string,
+    context: MediaContext,
+  ): Promise<RenderImage[]> {
+    return this.getImagesForRenderImpl(id, context)
+  }
+  async getAdminImages(id: string): Promise<AdminImage[]> {
+    return this.getAdminImagesImpl(id)
   }
   async create(input: ListingInput, status: ListingStatus): Promise<Listing> {
     this.createCalls.push({ input, status })

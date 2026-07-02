@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ListingForm } from '@/components/admin/ListingForm'
+import { EditPhotos } from '@/components/admin/EditPhotos'
 import { updateListing } from '@/lib/listings/actions'
 import { listingService } from '@/lib/listings/service'
 
@@ -15,6 +16,8 @@ export default async function EditListingPage({
   if (listing === null) {
     notFound()
   }
+
+  const images = await listingService.getAdminImages(listing.id)
 
   const missingFields =
     searchParams?.msg === 'missing-fields' && searchParams.fields
@@ -39,7 +42,6 @@ export default async function EditListingPage({
       </div>
       <ListingForm
         action={updateListing}
-        mode="update"
         initialStatus={listing.status}
         initialValues={{
           address: listing.address,
@@ -54,6 +56,7 @@ export default async function EditListingPage({
         hiddenFields={{ id: listing.id }}
         missingFields={missingFields}
       />
+      <EditPhotos listingId={listing.id} images={images} />
     </section>
   )
 }

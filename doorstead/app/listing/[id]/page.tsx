@@ -15,5 +15,7 @@ export default async function ListingDetailPage({
     notFound()
   }
 
-  return <ListingDetail listing={listing} />
+  const images = await listingService.getImagesForRender(listing.id, 'public')
+
+  return <ListingDetail listing={listing} images={images} />
 }

@@ -1,13 +1,28 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { anonClient } from '@/lib/db/anon-client'
 import { createServerClient } from '@/lib/db/server-client'
+import { createSignedUrl } from '@/lib/db/storage'
+import { mediaService as defaultMediaService } from '@/lib/media/service'
+import type { MediaContext, MediaService } from '@/lib/media/contract'
 import type {
+  AdminImage,
   Listing,
   ListingInput,
   ListingService,
   ListingStatus,
   ListingType,
+  RenderImage,
 } from './contract'
+
+// Signed links are short-lived: long enough to render a page, short enough that
+// a leaked URL expires quickly. One hour matches the public page's freshness.
+const SIGNED_URL_TTL_SECONDS = 60 * 60
+
+type SignUrl = (
+  key: string,
+  expiresInSeconds: number,
+  context: MediaContext,
+) => Promise<string>
 
 type ListingRow = {
   id: string
@@ -60,7 +75,77 @@ const toListing = (row: ListingRow): Listing => ({
 })
 
 export class DefaultListingService implements ListingService {
-  constructor(private readonly client: SupabaseClient) {}
+  constructor(
+    private readonly client: SupabaseClient,
+    private readonly media: MediaService = defaultMediaService,
+    private readonly signUrl: SignUrl = createSignedUrl,
+  ) {}
+
+  async getImagesForRender(
+    listingId: string,
+    context: MediaContext,
+  ): Promise<RenderImage[]> {
+    const stored = await this.media.listForListing(listingId, context)
+    // Lead with the explicit cover; the rest keep their position order (the read
+    // is already position-ordered, and a stable sort preserves it).
+    const ordered = [...stored].sort(
+      (a, b) => Number(b.isCover) - Number(a.isCover),
+    )
+    // Sign each image independently and drop any tile whose signing fails (an
+    // evicted or expired object). A single bad key must degrade one tile, not
+    // reject the whole render and 500 the listing page.
+    const signed = await Promise.all(
+      ordered.map(async (image): Promise<RenderImage | null> => {
+        try {
+          const [url, thumbUrl] = await Promise.all([
+            this.signUrl(image.webKey, SIGNED_URL_TTL_SECONDS, context),
+            this.signUrl(image.thumbKey, SIGNED_URL_TTL_SECONDS, context),
+          ])
+          return { url, thumbUrl, isFloorplan: image.isFloorplan }
+        } catch {
+          return null
+        }
+      }),
+    )
+    const storedImages: RenderImage[] = signed.filter(
+      (image): image is RenderImage => image !== null,
+    )
+
+    const listing = await this.getById(listingId)
+    const legacyImages: RenderImage[] = (listing?.photoUrls ?? []).map(
+      (url) => ({ url, thumbUrl: url, isFloorplan: false }),
+    )
+
+    return [...storedImages, ...legacyImages]
+  }
+
+  async getAdminImages(listingId: string): Promise<AdminImage[]> {
+    // Position order (not cover-first): the editor's reorder handles operate on
+    // position, so the list must mirror the stored order. Cover is surfaced via
+    // the flag, not by reordering. Signs the thumb under the admin context so a
+    // draft's objects resolve; drops any tile whose signing fails.
+    const stored = await this.media.listForListing(listingId, 'admin')
+    const signed = await Promise.all(
+      stored.map(async (image): Promise<AdminImage | null> => {
+        try {
+          const thumbUrl = await this.signUrl(
+            image.thumbKey,
+            SIGNED_URL_TTL_SECONDS,
+            'admin',
+          )
+          return {
+            id: image.id,
+            thumbUrl,
+            isCover: image.isCover,
+            isFloorplan: image.isFloorplan,
+          }
+        } catch {
+          return null
+        }
+      }),
+    )
+    return signed.filter((image): image is AdminImage => image !== null)
+  }
 
   async listLive(): Promise<Listing[]> {
     const { data, error } = await this.client
