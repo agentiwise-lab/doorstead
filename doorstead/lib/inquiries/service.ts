@@ -23,7 +23,7 @@ type InquiryRow = {
 // independently re-checks lower(email) = lower(jwt email) as an exact
 // match, but escaping keeps this filter's own intent correct rather than
 // leaning on that second layer to paper over it.
-const escapeForIlike = (value: string): string =>
+export const escapeForIlike = (value: string): string =>
   value.replace(/[\\%_]/g, (char) => `\\${char}`)
 
 const toInquiryWithListing = (row: InquiryRow): InquiryWithListing => ({

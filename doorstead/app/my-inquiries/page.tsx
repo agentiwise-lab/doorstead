@@ -1,15 +1,10 @@
 import { redirect } from 'next/navigation'
 import { authService } from '@/lib/auth/service'
 import { inquiryService } from '@/lib/inquiries/service'
+import { formatDateTime } from '@/lib/inquiries/format'
 import { PublicHeader } from '@/components/ui/PublicHeader'
 
 export const dynamic = 'force-dynamic'
-
-const formatDateTime = (iso: string): string =>
-  new Date(iso).toLocaleString('en-GB', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
 
 export default async function MyInquiriesPage() {
   let email: string
