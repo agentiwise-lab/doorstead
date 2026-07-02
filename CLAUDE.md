@@ -25,6 +25,7 @@ Linear MCP is configured locally for this project (HTTP transport):
 - When listing/creating issues, default to **team `AGE`** and **project `Doorstead`** unless told otherwise.
 - Filter `list_issues` by `project: "Doorstead"` or `team: "AGE"` to keep results scoped.
 - New issues belong to the Doorstead project by default.
+- **Every issue raised in this repo follows the `/to-issues` format**: `## What to build`, `## Acceptance criteria`, `## Blocked by`, and a `## Branch` block naming the base branch. This holds for follow-ups filed by `/review-pr` too, so any unattended run can pick an issue up self-contained. Do not raise a bare bug note.
 
 ## Running the app
 
