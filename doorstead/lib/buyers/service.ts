@@ -48,6 +48,34 @@ export class DefaultBuyerService implements BuyerService {
     if (error) throw error
   }
 
+  async unsaveListing(buyerId: string, listingId: string): Promise<void> {
+    const client = createServerClient()
+    const { error } = await client
+      .from('saved_listings')
+      .delete()
+      .eq('buyer_id', buyerId)
+      .eq('listing_id', listingId)
+
+    if (error) throw error
+  }
+
+  async savedListingIds(
+    buyerId: string,
+    listingIds: string[],
+  ): Promise<Set<string>> {
+    if (listingIds.length === 0) return new Set()
+
+    const client = createServerClient()
+    const { data, error } = await client
+      .from('saved_listings')
+      .select('listing_id')
+      .eq('buyer_id', buyerId)
+      .in('listing_id', listingIds)
+
+    if (error) throw error
+    return new Set((data ?? []).map((row) => row.listing_id as string))
+  }
+
   async listShortlist(buyerId: string): Promise<Listing[]> {
     const client = createServerClient()
     const { data, error } = await client

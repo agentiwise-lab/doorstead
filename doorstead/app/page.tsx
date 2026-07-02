@@ -1,11 +1,22 @@
 import { listingService } from '@/lib/listings/service'
+import { authService } from '@/lib/auth/service'
+import { buyerService } from '@/lib/buyers/service'
 import { ListingCard } from '@/components/listing/ListingCard'
+import { SaveListingButton } from '@/components/listing/SaveListingButton'
 import { PublicHeader } from '@/components/ui/PublicHeader'
 
 export const dynamic = "force-dynamic"
 
 export default async function HomePage() {
   const listings = await listingService.listLive()
+
+  const session = await authService.getSession()
+  const savedIds = session
+    ? await buyerService.savedListingIds(
+        session.userId,
+        listings.map((listing) => listing.id),
+      )
+    : new Set<string>()
 
   return (
     <div className="min-h-screen bg-brand-50">
@@ -43,7 +54,16 @@ export default async function HomePage() {
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {listings.map((listing) => (
               <li key={listing.id}>
-                <ListingCard listing={listing} />
+                <ListingCard
+                  listing={listing}
+                  saveControl={
+                    <SaveListingButton
+                      listingId={listing.id}
+                      isSaved={savedIds.has(listing.id)}
+                      redirectTo="/"
+                    />
+                  }
+                />
               </li>
             ))}
           </ul>

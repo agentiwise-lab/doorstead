@@ -33,7 +33,7 @@ vi.mock('@/lib/buyers/service', () => ({
   buyerService: fakeBuyerService,
 }))
 
-const { saveListing } = await import('@/lib/buyers/actions')
+const { saveListing, unsaveListing } = await import('@/lib/buyers/actions')
 const { revalidatePath } = await import('next/cache')
 const { redirect } = await import('next/navigation')
 
@@ -48,6 +48,8 @@ function makeFormData(entries: Record<string, string>): FormData {
 beforeEach(() => {
   fakeBuyerService.saveListingCalls = []
   fakeBuyerService.saveListingImpl = async () => {}
+  fakeBuyerService.unsaveListingCalls = []
+  fakeBuyerService.unsaveListingImpl = async () => {}
   sessionMode = 'buyer'
   vi.mocked(revalidatePath).mockClear()
   vi.mocked(redirect).mockClear()
@@ -97,5 +99,135 @@ describe('saveListing', () => {
 
     expect(fakeBuyerService.saveListingCalls.length).toBe(0)
     expect(vi.mocked(redirect)).toHaveBeenCalledWith('/')
+  })
+
+  it('redirects to redirectTo when it is a valid same-origin relative path', async () => {
+    const fd = makeFormData({ listingId: LISTING_ID, redirectTo: '/' })
+
+    await expect(saveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/')
+  })
+
+  it('ignores a protocol-relative redirectTo and falls back to the default', async () => {
+    const fd = makeFormData({ listingId: LISTING_ID, redirectTo: '//evil.com' })
+
+    await expect(saveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/listing/${LISTING_ID}`)
+  })
+
+  it('ignores an absolute-URL redirectTo and falls back to the default', async () => {
+    const fd = makeFormData({
+      listingId: LISTING_ID,
+      redirectTo: 'https://evil.com',
+    })
+
+    await expect(saveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/listing/${LISTING_ID}`)
+  })
+
+  it('ignores a backslash-disguised protocol-relative redirectTo and falls back to the default', async () => {
+    const fd = makeFormData({
+      listingId: LISTING_ID,
+      redirectTo: '/\\evil.com',
+    })
+
+    await expect(saveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/listing/${LISTING_ID}`)
+  })
+})
+
+describe('unsaveListing', () => {
+  it('removes the save, revalidates all three surfaces, and redirects to the listing page for a signed-in buyer', async () => {
+    const fd = makeFormData({ listingId: LISTING_ID })
+
+    await expect(unsaveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(fakeBuyerService.unsaveListingCalls).toEqual([
+      { buyerId: 'buyer-1', listingId: LISTING_ID },
+    ])
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/shortlist')
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/')
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(
+      `/listing/${LISTING_ID}`,
+    )
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/listing/${LISTING_ID}`)
+  })
+
+  it('redirects to /sign-in with a next param back to the listing when there is no session', async () => {
+    sessionMode = 'no-session'
+    const fd = makeFormData({ listingId: LISTING_ID })
+
+    await expect(unsaveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+      `/sign-in?next=${encodeURIComponent(`/listing/${LISTING_ID}`)}`,
+    )
+    expect(fakeBuyerService.unsaveListingCalls.length).toBe(0)
+  })
+
+  it('redirects to /sign-in the same way when the session belongs to an admin', async () => {
+    sessionMode = 'admin'
+    const fd = makeFormData({ listingId: LISTING_ID })
+
+    await expect(unsaveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(
+      `/sign-in?next=${encodeURIComponent(`/listing/${LISTING_ID}`)}`,
+    )
+    expect(fakeBuyerService.unsaveListingCalls.length).toBe(0)
+  })
+
+  it('redirects to / and does not call the service for a blank listingId', async () => {
+    const fd = makeFormData({ listingId: '' })
+
+    await expect(unsaveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(fakeBuyerService.unsaveListingCalls.length).toBe(0)
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/')
+  })
+
+  it('redirects to redirectTo when it is a valid same-origin relative path', async () => {
+    const fd = makeFormData({ listingId: LISTING_ID, redirectTo: '/' })
+
+    await expect(unsaveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/')
+  })
+
+  it('ignores a protocol-relative redirectTo and falls back to the default', async () => {
+    const fd = makeFormData({
+      listingId: LISTING_ID,
+      redirectTo: '//evil.com',
+    })
+
+    await expect(unsaveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/listing/${LISTING_ID}`)
+  })
+
+  it('ignores an absolute-URL redirectTo and falls back to the default', async () => {
+    const fd = makeFormData({
+      listingId: LISTING_ID,
+      redirectTo: 'https://evil.com',
+    })
+
+    await expect(unsaveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/listing/${LISTING_ID}`)
+  })
+
+  it('ignores a backslash-disguised protocol-relative redirectTo and falls back to the default', async () => {
+    const fd = makeFormData({
+      listingId: LISTING_ID,
+      redirectTo: '/\\evil.com',
+    })
+
+    await expect(unsaveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/listing/${LISTING_ID}`)
   })
 })

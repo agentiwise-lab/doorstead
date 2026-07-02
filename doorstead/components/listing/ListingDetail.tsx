@@ -39,7 +39,13 @@ function Fact({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function ListingDetail({ listing }: { listing: Listing }) {
+export function ListingDetail({
+  listing,
+  isSaved,
+}: {
+  listing: Listing
+  isSaved: boolean
+}) {
   const address = listing.address ?? 'Address available on request'
   const area = formatArea(listing.areaSqft)
 
@@ -83,7 +89,11 @@ export function ListingDetail({ listing }: { listing: Listing }) {
                 {formatPrice(listing.priceGbp)}
               </p>
             </div>
-            <SaveListingButton listingId={listing.id} />
+            <SaveListingButton
+              listingId={listing.id}
+              isSaved={isSaved}
+              redirectTo={`/listing/${listing.id}`}
+            />
           </div>
           {facts.length > 0 && (
             <dl className="mt-6 grid grid-cols-2 gap-5 border-t border-brand-100 pt-6 sm:grid-cols-4">
