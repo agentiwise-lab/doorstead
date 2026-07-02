@@ -56,7 +56,7 @@ beforeEach(() => {
 })
 
 describe('saveListing', () => {
-  it('records the save and redirects to the listing page for a signed-in buyer', async () => {
+  it('records the save, revalidates all three surfaces, and redirects to the listing page for a signed-in buyer', async () => {
     const fd = makeFormData({ listingId: LISTING_ID })
 
     await expect(saveListing(fd)).rejects.toThrow(/NEXT_REDIRECT/)
@@ -65,6 +65,10 @@ describe('saveListing', () => {
       { buyerId: 'buyer-1', listingId: LISTING_ID },
     ])
     expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/shortlist')
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith('/')
+    expect(vi.mocked(revalidatePath)).toHaveBeenCalledWith(
+      `/listing/${LISTING_ID}`,
+    )
     expect(vi.mocked(redirect)).toHaveBeenCalledWith(`/listing/${LISTING_ID}`)
   })
 

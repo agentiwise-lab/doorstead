@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizeNextPath } from '@/lib/auth/next-path'
+import { isSafeRelativePath, sanitizeNextPath } from '@/lib/auth/next-path'
 
 describe('sanitizeNextPath', () => {
   it('passes through a plain relative path unchanged', () => {
@@ -60,5 +60,23 @@ describe('sanitizeNextPath', () => {
 
   it('falls back to /shortlist when the first array value is unsafe', () => {
     expect(sanitizeNextPath(['http://evil.com', '/admin'])).toBe('/shortlist')
+  })
+})
+
+describe('isSafeRelativePath', () => {
+  it('accepts a valid same-origin relative path', () => {
+    expect(isSafeRelativePath('/listing/abc')).toBe(true)
+  })
+
+  it('rejects a protocol-relative path', () => {
+    expect(isSafeRelativePath('//evil.com')).toBe(false)
+  })
+
+  it('rejects a backslash-prefixed bypass attempt', () => {
+    expect(isSafeRelativePath('/\\evil.com')).toBe(false)
+  })
+
+  it('rejects a path containing a control character', () => {
+    expect(isSafeRelativePath('/\t/evil.com')).toBe(false)
   })
 })
