@@ -15,6 +15,7 @@ For each of AGE-115, AGE-116, AGE-117, AGE-118, AGE-119 in order:
   /review-code           # review the unit's diff, fix findings
   commit                 # one commit per unit on feat/listing-image-uploads
 ```
+The loop is driven by an orchestrator prompt, saved in the repo at `doorstead/docs/prompts/loop-orchestrator.md`: it lists the ready issues, dispatches one fresh worker per issue (each worker self-reviews), reviews each result again itself, and never merges.
 
 ## Result
 - Five units land on `feat/listing-image-uploads`: 66 tests to 102, typecheck and build clean.
