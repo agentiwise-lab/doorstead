@@ -8,7 +8,6 @@ The loop now runs off your machine. A saved Claude routine executes the orchestr
 ## How the routine runs each cycle
 - Lists the ready issues (Backlog or Todo), skips anything not ready, and defers a destructive issue unless it carries `destructive:signed-off`.
 - Dispatches one fresh worker per issue: the worker builds test-first, self-reviews its diff with `/review-code`, and returns. The orchestrator then reviews again independently, a second perspective, and dispatches a fix-worker for any auto-fixable findings.
-- Raises a reviewable PR, never touching `main` and never merging its own work.
 - Reports a per-issue outcome to a Linear status update and Slack, with a push notification only when something ran.
 
 ## What the routine shipped, and what the gate caught
