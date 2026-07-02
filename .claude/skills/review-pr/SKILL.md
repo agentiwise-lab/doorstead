@@ -41,6 +41,7 @@ Write `docs/ship/<slug>.md` (the merge log). Template:
 - Never treat a stale or absent review as tacit approval: no review means no gate, because silence is not a pass.
 - A SHA mismatch invalidates the review: new commits can break what you approved, so a moved head means re-review.
 - Never merge without explicit confirmation, and never push without it: rollback is `git revert`, but an unwanted merge is already in history.
+- Any follow-up issue you file for a finding you do not fix now is raised in the `/to-issues` format: `## What to build`, `## Acceptance criteria`, `## Blocked by`, and a `## Branch` block naming the base branch. A bare bug note is not enough; an unattended run must be able to pick it up self-contained.
 
 ## Handoff
 Done: the PR is merged.
