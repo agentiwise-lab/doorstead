@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { authService } from '@/lib/auth/service'
+import type { Session } from '@/lib/auth/contract'
 import { inquiryService } from '@/lib/inquiries/service'
 import { formatDateTime } from '@/lib/inquiries/format'
 import { PublicHeader } from '@/components/ui/PublicHeader'
@@ -7,19 +8,18 @@ import { PublicHeader } from '@/components/ui/PublicHeader'
 export const dynamic = 'force-dynamic'
 
 export default async function MyInquiriesPage() {
-  let email: string
+  let session: Session
   try {
-    const session = await authService.requireBuyer()
-    email = session.email
+    session = await authService.requireBuyer()
   } catch {
     redirect('/sign-in?next=%2Fmy-inquiries')
   }
 
-  const inquiries = await inquiryService.listForBuyer(email)
+  const inquiries = await inquiryService.listForBuyer(session.email)
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <PublicHeader contextLabel="My inquiries" />
+      <PublicHeader contextLabel="My inquiries" session={session} />
 
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
         {inquiries.length === 0 ? (

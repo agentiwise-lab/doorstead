@@ -20,7 +20,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <PublicHeader />
+      <PublicHeader session={session} />
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         {listings.length === 0 ? (

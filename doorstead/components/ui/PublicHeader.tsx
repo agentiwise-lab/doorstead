@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react'
+import type { Session } from '@/lib/auth/contract'
+import { BuyerAuthCluster } from './BuyerAuthCluster'
 
 interface PublicHeaderProps {
   contextLabel?: string
   contextLabelAs?: 'h1' | 'p'
   action?: ReactNode
   maxWidth?: '4xl' | '6xl'
+  session?: Session | null
 }
 
 export function PublicHeader({
@@ -12,6 +15,7 @@ export function PublicHeader({
   contextLabelAs = 'p',
   action,
   maxWidth = '6xl',
+  session = null,
 }: PublicHeaderProps = {}) {
   const ContextEl = contextLabelAs === 'h1' ? 'h1' : 'p'
   const widthClass = maxWidth === '4xl' ? 'max-w-4xl' : 'max-w-6xl'
@@ -31,9 +35,10 @@ export function PublicHeader({
           </ContextEl>
         )}
 
-        {action && (
-          <div className="col-start-3 justify-self-end">{action}</div>
-        )}
+        <div className="col-start-3 flex items-center justify-end gap-4">
+          {action}
+          <BuyerAuthCluster session={session} />
+        </div>
       </div>
     </header>
   )

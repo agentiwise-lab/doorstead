@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Listing } from '@/lib/listings/contract'
+import type { Session } from '@/lib/auth/contract'
 import { PhotoGallery } from './PhotoGallery'
 import { InquiryForm } from './InquiryForm'
 import { SaveListingButton } from './SaveListingButton'
@@ -42,9 +43,11 @@ function Fact({ label, value }: { label: string; value: string }) {
 export function ListingDetail({
   listing,
   isSaved,
+  session,
 }: {
   listing: Listing
   isSaved: boolean
+  session: Session | null
 }) {
   const address = listing.address ?? 'Address available on request'
   const area = formatArea(listing.areaSqft)
@@ -64,6 +67,7 @@ export function ListingDetail({
         contextLabelAs="h1"
         action={<BackButton />}
         maxWidth="4xl"
+        session={session}
       />
 
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">

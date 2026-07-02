@@ -24,5 +24,5 @@ export default async function ListingDetailPage({
       )
     : false
 
-  return <ListingDetail listing={listing} isSaved={isSaved} />
+  return <ListingDetail listing={listing} isSaved={isSaved} session={session} />
 }

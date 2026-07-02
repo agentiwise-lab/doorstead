@@ -16,12 +16,16 @@ vi.mock('@/lib/auth/service', () => ({
       lastNextPath = nextPath
       return 'https://accounts.google.com/o/oauth2/auth?state=abc'
     }),
+    signOut: vi.fn(async () => {
+      signOutCalls += 1
+    }),
   },
 }))
 
 let lastNextPath = ''
+let signOutCalls = 0
 
-const { signInWithGoogle } = await import('@/lib/auth/actions')
+const { signInWithGoogle, logout } = await import('@/lib/auth/actions')
 const { redirect } = await import('next/navigation')
 const { authService } = await import('@/lib/auth/service')
 
@@ -33,8 +37,10 @@ function makeFormData(entries: Record<string, string>): FormData {
 
 beforeEach(() => {
   lastNextPath = ''
+  signOutCalls = 0
   vi.mocked(redirect).mockClear()
   vi.mocked(authService.getGoogleSignInUrl).mockClear()
+  vi.mocked(authService.signOut).mockClear()
 })
 
 describe('signInWithGoogle', () => {
@@ -62,5 +68,25 @@ describe('signInWithGoogle', () => {
     expect(vi.mocked(redirect)).toHaveBeenCalledWith(
       'https://accounts.google.com/o/oauth2/auth?state=abc',
     )
+  })
+})
+
+describe('logout', () => {
+  it('signs the session out before redirecting', async () => {
+    await expect(logout('/admin/login')).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(signOutCalls).toBe(1)
+  })
+
+  it('redirects to the caller-supplied target', async () => {
+    await expect(logout('/admin/login')).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/admin/login')
+  })
+
+  it('redirects buyers to the public home when bound to /', async () => {
+    await expect(logout('/')).rejects.toThrow(/NEXT_REDIRECT/)
+
+    expect(vi.mocked(redirect)).toHaveBeenCalledWith('/')
   })
 })

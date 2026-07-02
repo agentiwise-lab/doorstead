@@ -25,9 +25,9 @@ export async function login(
   redirect('/admin')
 }
 
-export async function logout(): Promise<void> {
+export async function logout(redirectTo: string): Promise<void> {
   await authService.signOut()
-  redirect('/admin/login')
+  redirect(redirectTo)
 }
 
 export async function signInWithGoogle(formData: FormData): Promise<void> {

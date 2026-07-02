@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { authService } from '@/lib/auth/service'
+import type { Session } from '@/lib/auth/contract'
 import { buyerService } from '@/lib/buyers/service'
 import { ListingCard } from '@/components/listing/ListingCard'
 import { PublicHeader } from '@/components/ui/PublicHeader'
@@ -7,19 +8,18 @@ import { PublicHeader } from '@/components/ui/PublicHeader'
 export const dynamic = 'force-dynamic'
 
 export default async function ShortlistPage() {
-  let buyerId: string
+  let session: Session
   try {
-    const session = await authService.requireBuyer()
-    buyerId = session.userId
+    session = await authService.requireBuyer()
   } catch {
     redirect('/sign-in?next=%2Fshortlist')
   }
 
-  const listings = await buyerService.listShortlist(buyerId)
+  const listings = await buyerService.listShortlist(session.userId)
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <PublicHeader contextLabel="Your shortlist" />
+      <PublicHeader contextLabel="Your shortlist" session={session} />
 
       <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         {listings.length === 0 ? (
