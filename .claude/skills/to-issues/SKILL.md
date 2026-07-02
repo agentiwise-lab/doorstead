@@ -13,10 +13,11 @@ The unit boundaries are fixed by the input. Never re-slice them.
 ## Process
 1. Read the input and list its units in dependency order. Done when every unit has a name and a "Blocked by" line you can trace.
 2. For each unit, distill a self-contained brief: the behavioral expectation plus this unit's slice of the requirement, enough to implement with no other context. Done when the brief reads complete without the plan file open.
-3. Flag any destructive intent per `/destructive-change-gate`. Done when each flagged unit carries the warning and is held for sign-off, not published.
+3. Classify each unit for destructive intent per `/destructive-change-gate` (a destructive database change, a scope cut, or a feature/UI regression). For each destructive unit: apply the `destructive` label and add a `## Destructive change` block to its body naming the TYPE (database / feature regression / UI regression), the MECHANISM (how the destruction happens), and what it affects. Publish it like any other unit. Done when every destructive unit is labeled `destructive` and its body states type, mechanism, and blast radius.
 4. Discover the Linear tools at runtime (the project's Linear workspace is configured) and create issues in dependency order, so each "Blocked by" can reference a real, already-created issue ID. Tag every issue with the plan's feature key as the label `feat:<slug>` (the key the plan declared, do not invent or re-derive it; create the label if it does not exist). Done when every non-blocked unit is published, its ID recorded, and its feature label set. Read the plan's `Base branch` (fall back to the current branch if the input has none) and record it in every issue's `## Branch` block.
 5. Wire blockers: set each issue's "Blocked by" to the real IDs from step 4. Done when no "Blocked by" line names a unit instead of an issue ID.
 6. Announce the branch, then continue without waiting: state that these issues implement on `feat/<slug>`, cut from `<base>`, as "these land on `feat/<slug>`, branched from `<base>`; stop me if the base is wrong." Non-blocking: say it, do not halt.
+7. Ask for destructive sign-off, after publishing. The issues are already created in step 4; publishing never waits on this answer. Now put the question to the user directly: list every `destructive` issue with its type and mechanism, and for each ask "do you sign off on running this destructive change unattended?" Then update each issue by the answer: approved gets `destructive:signed-off`; not approved is left as is (it stays a stop-gate the loop holds until a human signs off). If no human is present to answer, leave every destructive issue unsigned (the safe default). Done when the question has been asked and every answer is written back as a label.
 
 ## Output
 One Linear issue per unit. Each issue body:
@@ -34,6 +35,9 @@ One Linear issue per unit. Each issue body:
 
 ## Branch
 Implement on `feat/<slug>`, cut from `<base>`.
+
+## Destructive change
+<ONLY on a destructive unit; omit this block otherwise. Type: database | feature regression | UI regression. Mechanism: how the destruction happens and what it affects. Runs unattended only once this issue carries the `destructive:signed-off` label.>
 </issue-template>
 
 ## Hard rules
@@ -44,7 +48,7 @@ Implement on `feat/<slug>`, cut from `<base>`.
 - One issue equals one unit equals one phase. Never merge units into one issue or split a unit across issues: that silently rewrites the plan's phasing.
 - Every issue carries the plan's feature key as the `feat:<slug>` label. The plan decides the grouping (one plan = one feature); this skill only stamps it, never invents or re-slices it. It is the key `/implement` uses to land all of a feature's issues on one `feat/<slug>` branch.
 - Every issue records its branch and base in a `## Branch` block (`feat/<slug>`, cut from `<base>`). This is operational metadata, not implementation detail: it makes an unattended `/implement` fully self-contained, so a fresh cloud session never infers the base from whatever branch it happens to boot on.
-- Destructive intent is flagged in the issue and stops for sign-off, never silently published. Never destroy work or publish a destructive step without confirmation.
+- A destructive unit is labeled `destructive`, its body names the type, mechanism, and blast radius, and it is surfaced for sign-off; issues the user approves get `destructive:signed-off`. It is published like any other unit (never silently), and the loop never runs it unattended without the sign-off label.
 
 ## Handoff
 Continue with `/implement`: pick one issue, or implement all in dependency order.
