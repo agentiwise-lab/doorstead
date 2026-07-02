@@ -6,8 +6,12 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminLoginPage() {
   const session = await authService.getSession()
-  if (session && (await authService.isAdmin(session.userId))) {
-    redirect('/admin')
+  if (session) {
+    // isAdmin() now throws on a query error (see lib/auth/service.ts) so callers
+    // can fail closed; here that just means falling through to the login form,
+    // matching this page's prior behavior when the check couldn't be confirmed.
+    const isAdmin = await authService.isAdmin(session.userId).catch(() => false)
+    if (isAdmin) redirect('/admin')
   }
 
   return (

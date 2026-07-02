@@ -9,5 +9,8 @@ export interface AuthService {
   signOut(): Promise<void>
   getSession(): Promise<Session | null>
   requireAdmin(): Promise<Session>
+  requireBuyer(): Promise<Session>
   isAdmin(userId: string): Promise<boolean>
+  getGoogleSignInUrl(nextPath: string): Promise<string>
+  exchangeCodeForSession(code: string): Promise<boolean>
 }
