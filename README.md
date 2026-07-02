@@ -4,6 +4,15 @@ A small real-estate listings app (Next.js + Supabase) that serves as the demo co
 
 The application code lives in `doorstead/`. This `main` branch is only the overview; it is not a teaching snapshot.
 
+## Running it and logging in
+
+`cd doorstead && npm install && npm run dev`, then open http://localhost:3000. A dev-only test admin is seeded by `doorstead/supabase/seed.sql` so you can log in and exercise the admin:
+
+- **email:** `admin@doorstead.test`
+- **password:** `Passw0rd!demo`
+
+Full setup, the app conventions, and the production-deploy runbook live in the root `CLAUDE.md`.
+
 ## How the branches work
 
 Every numbered video has two snapshot branches:
