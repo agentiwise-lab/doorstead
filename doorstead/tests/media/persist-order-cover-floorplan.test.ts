@@ -13,9 +13,23 @@ type DeleteOp = { filters: Filter[] }
 
 let updateOps: UpdateOp[] = []
 let deleteOps: DeleteOp[] = []
+// reorder reads the full stored set first (AGE-125). This listing holds exactly
+// a, b, c, so reordering the same three ids writes exactly those three rows.
+let storedRows: Array<{ id: string }> = []
 
 function makeServerClient() {
   const from = vi.fn((_table: string) => {
+    const select = (_columns: string) => {
+      const result = Promise.resolve({ data: storedRows, error: null })
+      const chain = {
+        eq: () => chain,
+        order: () => chain,
+        then: result.then.bind(result),
+        catch: result.catch.bind(result),
+        finally: result.finally.bind(result),
+      }
+      return chain
+    }
     const update = (payload: UpdatePayload) => {
       const op: UpdateOp = { payload, filters: [] }
       updateOps.push(op)
@@ -45,7 +59,7 @@ function makeServerClient() {
         Promise.resolve({ data: null, error: null }),
       )
     }
-    return { update, delete: del }
+    return { update, delete: del, select }
   })
   return { from }
 }
@@ -64,6 +78,7 @@ const LISTING = 'listing-1'
 beforeEach(() => {
   updateOps = []
   deleteOps = []
+  storedRows = [{ id: 'a' }, { id: 'b' }, { id: 'c' }]
   serverClient = makeServerClient()
 })
 

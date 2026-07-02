@@ -120,12 +120,31 @@ export class DefaultMediaService implements MediaService {
 
   async reorder(listingId: string, orderedImageIds: string[]): Promise<void> {
     const client = createServerClient()
-    for (let position = 0; position < orderedImageIds.length; position++) {
+    // Reorder over the FULL stored set, not just the visible tiles the caller
+    // passed. A row hidden from the admin grid (e.g. its thumbnail failed to
+    // sign) is still in listing_media; rewriting only the passed subset leaves
+    // that row at its stale position and collides with a rewritten one. Fetch
+    // every id in current position order, put the passed ids first (in the given
+    // order), then append any remaining ids, and write 0..n-1 across all of them.
+    const { data, error: fetchError } = await client
+      .from('listing_media')
+      .select('id')
+      .eq('listing_id', listingId)
+      .order('position', { ascending: true })
+      .order('created_at', { ascending: true })
+    if (fetchError) throw fetchError
+
+    const storedIds = (data ?? []).map((row) => (row as { id: string }).id)
+    const passed = orderedImageIds.filter((id) => storedIds.includes(id))
+    const remaining = storedIds.filter((id) => !passed.includes(id))
+    const fullOrder = [...passed, ...remaining]
+
+    for (let position = 0; position < fullOrder.length; position++) {
       const { error } = await client
         .from('listing_media')
         .update({ position })
         .eq('listing_id', listingId)
-        .eq('id', orderedImageIds[position])
+        .eq('id', fullOrder[position])
       if (error) throw error
     }
   }
