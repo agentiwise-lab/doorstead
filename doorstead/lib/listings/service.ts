@@ -90,16 +90,24 @@ export class DefaultListingService implements ListingService {
     const ordered = [...stored].sort(
       (a, b) => Number(b.isCover) - Number(a.isCover),
     )
-    const storedImages: RenderImage[] = await Promise.all(
-      ordered.map(async (image) => ({
-        url: await this.signUrl(image.webKey, SIGNED_URL_TTL_SECONDS, context),
-        thumbUrl: await this.signUrl(
-          image.thumbKey,
-          SIGNED_URL_TTL_SECONDS,
-          context,
-        ),
-        isFloorplan: image.isFloorplan,
-      })),
+    // Sign each image independently and drop any tile whose signing fails (an
+    // evicted or expired object). A single bad key must degrade one tile, not
+    // reject the whole render and 500 the listing page.
+    const signed = await Promise.all(
+      ordered.map(async (image): Promise<RenderImage | null> => {
+        try {
+          const [url, thumbUrl] = await Promise.all([
+            this.signUrl(image.webKey, SIGNED_URL_TTL_SECONDS, context),
+            this.signUrl(image.thumbKey, SIGNED_URL_TTL_SECONDS, context),
+          ])
+          return { url, thumbUrl, isFloorplan: image.isFloorplan }
+        } catch {
+          return null
+        }
+      }),
+    )
+    const storedImages: RenderImage[] = signed.filter(
+      (image): image is RenderImage => image !== null,
     )
 
     const listing = await this.getById(listingId)

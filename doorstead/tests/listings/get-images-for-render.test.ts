@@ -183,6 +183,42 @@ describe('getImagesForRender', () => {
     ])
   })
 
+  it('drops an image whose signing fails and keeps the rest, rather than failing the page', async () => {
+    fakeMediaService.listForListingImpl = async () => [
+      storedImage({ id: 'a', webKey: 'a.web', thumbKey: 'a.thumb' }),
+      storedImage({ id: 'b', webKey: 'b.web', thumbKey: 'b.thumb' }),
+      storedImage({ id: 'c', webKey: 'c.web', thumbKey: 'c.thumb' }),
+    ]
+    const service = new DefaultListingService(
+      {} as never,
+      fakeMediaService,
+      async (key: string) => {
+        // 'b' has an unsignable key (e.g. object evicted / expired); its two
+        // sign calls reject. The page must still render a and c.
+        if (key === 'b.web' || key === 'b.thumb') {
+          throw new Error('failed to create signed url')
+        }
+        return `https://signed.example/${key}`
+      },
+    )
+    service.getById = async () => baseListing({ photoUrls: [] })
+
+    const result = await service.getImagesForRender(LISTING_ID, 'public')
+
+    expect(result).toEqual([
+      {
+        url: 'https://signed.example/a.web',
+        thumbUrl: 'https://signed.example/a.thumb',
+        isFloorplan: false,
+      },
+      {
+        url: 'https://signed.example/c.web',
+        thumbUrl: 'https://signed.example/c.thumb',
+        isFloorplan: false,
+      },
+    ])
+  })
+
   it('returns an empty list when the listing does not exist', async () => {
     fakeMediaService.listForListingImpl = async () => []
     const service = makeService(null)
